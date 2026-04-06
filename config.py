@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # API Keys
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Solana configuration
 SOLANA_RPC_URL = "https://api.devnet.solana.com"
@@ -14,5 +14,5 @@ WALLET_PATH = "wallet.json"
 # SWARM Coordination configuration
 NUM_AGENTS = 4
 DEBATE_ROUNDS = 3
-MODEL = "claude-sonnet-4-20250514"
+MODEL = "gemini-2.5-pro"
 QUORUM_THRESHOLD = 0.75
