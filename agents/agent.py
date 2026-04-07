@@ -6,8 +6,8 @@ from google.genai import types
 import config
 
 # max retries for api calls
-MAX_RETRIES = 3
-BASE_RETRY_DELAY = 5
+MAX_RETRIES = 5
+BASE_RETRY_DELAY = 15
 
 
 class Agent:
