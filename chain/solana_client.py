@@ -93,7 +93,7 @@ class SolanaClient:
                         # extract the actual memo part after the length
                         parts = log.split('): ', 1)
                         if len(parts) > 1:
-                            memo = parts[1]
+                            memo = parts[1].strip('"')
                             break
                             
             if not log_messages and getattr(tx_info.value.transaction.meta, "err", None) is not None:
