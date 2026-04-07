@@ -18,13 +18,16 @@ class Agent:
         "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing with any conclusion."
     }
 
-    def __init__(self, name: str, persona_type: str):
+    def __init__(self, name: str, persona_type: str, api_key: str = None):
         if persona_type not in self.PERSONAS:
             raise ValueError(f"Unknown persona type: {persona_type}")
         self.name = name
         self.persona_type = persona_type
         self.system_prompt = self.PERSONAS[persona_type]
-        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
+        
+        # Use provided key, or fallback to the first key in config
+        key_to_use = api_key if api_key else config.GEMINI_API_KEYS[0]
+        self.client = genai.Client(api_key=key_to_use)
 
     def _build_prompt(self, question: str, context: str = "", peer_opinions: list = None) -> str:
         """build the user prompt from question, context, and peer opinions."""
