@@ -23,5 +23,5 @@ WALLET_PATH = "wallet.json"
 # SWARM Coordination configuration
 NUM_AGENTS = 4
 DEBATE_ROUNDS = 3
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.0-flash"
 QUORUM_THRESHOLD = 0.75
