@@ -1,7 +1,14 @@
 import os
 import json
-import anthropic
+import time
+from google import genai
+from google.genai import types
 import config
+
+# max retries for api calls
+MAX_RETRIES = 3
+BASE_RETRY_DELAY = 5
+
 
 class Agent:
     PERSONAS = {
@@ -17,14 +24,10 @@ class Agent:
         self.name = name
         self.persona_type = persona_type
         self.system_prompt = self.PERSONAS[persona_type]
-        self.client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        self.client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-    def generate_response(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
-        """
-        Generate a structured response given the question, context, and peer opinions.
-        Returns a dict: {"answer": str, "confidence": float, "reasoning": str}
-        """
-        # Construct the user message
+    def _build_prompt(self, question: str, context: str = "", peer_opinions: list = None) -> str:
+        """build the user prompt from question, context, and peer opinions."""
         user_content = f"Question: {question}\n\n"
         if context:
             user_content += f"Context: {context}\n\n"
@@ -37,44 +40,65 @@ class Agent:
                 user_content += f"Reasoning: {op['response']['reasoning']}\n\n"
             user_content += "Use these opinions carefully to formulate or revise your answer.\n\n"
 
-        user_content += """
-Please provide your response strictly in the following JSON format without any markdown blocks or extra text:
-{
-    "answer": "Your final concise answer",
-    "confidence": 0.95,
-    "reasoning": "Step-by-step reasoning explaining how you arrived at this answer based on your persona."
-}
-"""
+        user_content += (
+            "Please provide your response strictly in the following JSON format "
+            "without any markdown blocks or extra text:\n"
+            "{\n"
+            '    "answer": "Your final concise answer",\n'
+            '    "confidence": 0.95,\n'
+            '    "reasoning": "Step-by-step reasoning explaining how you arrived '
+            'at this answer based on your persona."\n'
+            "}\n"
+        )
+        return user_content
 
-        try:
-            response = self.client.messages.create(
-                model=config.MODEL,
-                max_tokens=1024,
-                system=self.system_prompt,
-                messages=[
-                    {"role": "user", "content": user_content}
-                ]
-            )
-            
-            # Parse response text
-            # The model is instructed to output plain JSON, but we'll try to extract it safely
-            response_text = response.content[0].text
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}')
-            
-            if start_idx != -1 and end_idx != -1:
-                json_str = response_text[start_idx:end_idx+1]
-                return json.loads(json_str)
-            else:
+    def _parse_response(self, response_text: str) -> dict:
+        """safely extract json from model response text."""
+        start_idx = response_text.find('{')
+        end_idx = response_text.rfind('}')
+
+        if start_idx != -1 and end_idx != -1:
+            json_str = response_text[start_idx:end_idx + 1]
+            return json.loads(json_str)
+
+        return {
+            "answer": "Error parsing output",
+            "confidence": 0.0,
+            "reasoning": "Failed to parse json from model response."
+        }
+
+    def generate_response(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
+        """
+        generate a structured response given the question, context, and peer opinions.
+        includes retry logic with exponential backoff for rate limits.
+        returns a dict: {"answer": str, "confidence": float, "reasoning": str}
+        """
+        user_content = self._build_prompt(question, context, peer_opinions)
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = self.client.models.generate_content(
+                    model=config.MODEL,
+                    contents=user_content,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.system_prompt,
+                        temperature=0.7,
+                    ),
+                )
+                return self._parse_response(response.text)
+
+            except Exception as e:
+                error_str = str(e).lower()
+                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str
+                if is_retryable and attempt < MAX_RETRIES - 1:
+                    delay = BASE_RETRY_DELAY * (2 ** attempt)
+                    print(f"    [retry] {self.name} hit rate limit, waiting {delay}s "
+                          f"(attempt {attempt + 1}/{MAX_RETRIES})...")
+                    time.sleep(delay)
+                    continue
+                # non-retryable or exhausted retries
                 return {
-                    "answer": "Error parsing output",
+                    "answer": "API Error",
                     "confidence": 0.0,
-                    "reasoning": "Failed to parse json."
+                    "reasoning": str(e)
                 }
-        except Exception as e:
-            # Handle API errors with a fallback response
-            return {
-                "answer": "API Error",
-                "confidence": 0.0,
-                "reasoning": str(e)
-            }

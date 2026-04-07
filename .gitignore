@@ -1,5 +1,16 @@
+# secrets
 .env
+
+# wallet
 wallet.json
+
+# python
 __pycache__/
+**/__pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
+
+# ide
+.vscode/
+.idea/
