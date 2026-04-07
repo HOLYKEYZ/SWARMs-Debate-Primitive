@@ -92,7 +92,7 @@ class Agent:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str
+                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str or "quota" in error_str
                 if is_retryable and attempt < MAX_RETRIES - 1:
                     delay = BASE_RETRY_DELAY * (2 ** attempt)
                     print(f"    [retry] {self.name} hit rate limit, waiting {delay}s "
