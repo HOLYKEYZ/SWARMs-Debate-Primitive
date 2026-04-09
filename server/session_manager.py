@@ -185,6 +185,19 @@ class SessionManager:
                         "verified": session.chain_verified,
                         "explorer_url": f"https://explorer.solana.com/tx/{signature}?cluster=devnet",
                     })
+                    
+                    # Log reputation for all agents in the background
+                    final_round = getattr(session_data, "get", lambda x: None)("rounds", [])
+                    if final_round:
+                        for resp in final_round[-1].get("responses", []):
+                            ans = resp.get("response", {}).get("answer", "")
+                            conf = resp.get("response", {}).get("confidence", 0.0)
+                            from agents.reputation import compute_reputation_delta, get_agent_id
+                            agent_id = get_agent_id(resp.get("persona", ""))
+                            delta = compute_reputation_delta(ans, final_answer, conf, quorum)
+                            if agent_id:
+                                await asyncio.to_thread(client.log_agent_reputation, agent_id, session.session_id, delta)
+
                 except Exception as e:
                     session.emit("chain_error", {"error": str(e)})
 

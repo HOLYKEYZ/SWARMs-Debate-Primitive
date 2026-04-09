@@ -105,3 +105,34 @@ class SolanaClient:
             }
         except Exception as e:
             return {"verified": False, "memo": f"Verification error: {str(e)}"}
+
+    def log_agent_reputation(self, agent_id: str, session_id: str, delta: float) -> str:
+        """
+        Log an agent's reputation change to the Solana Devnet via Memo Program.
+        """
+        if not agent_id:
+            return "No agent ID, skipping map log."
+            
+        memo_content = f"AGENT_REP:{agent_id}:{session_id}:{delta}"
+        
+        memo_ix = Instruction(
+            program_id=MEMO_PROGRAM_ID,
+            accounts=[],
+            data=memo_content.encode("utf-8")
+        )
+        
+        resp = self.client.get_latest_blockhash()
+        blockhash = resp.value.blockhash
+        msg = Message.new_with_blockhash([memo_ix], self.keypair.pubkey(), blockhash)
+        tx = VersionedTransaction(msg, [self.keypair])
+        
+        try:
+            print(f"Logging reputation {delta} for agent {agent_id} on-chain...")
+            tx_resp = self.client.send_transaction(tx)
+            signature = str(tx_resp.value)
+            print(f"Agent rep tx: {signature}")
+            time.sleep(1) # brief pause to prevent rate limiting
+            return signature
+        except Exception as e:
+            print(f"Failed to log reputation on-chain: {str(e)}")
+            return ""
