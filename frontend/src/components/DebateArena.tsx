@@ -9,8 +9,25 @@ import { Send, Loader2, Play } from 'lucide-react';
 
 interface EventData {
   event: string;
-  data: any;
+  data: Record<string, unknown>;
   timestamp: string;
+}
+
+interface SelectorResult {
+  mechanism?: string;
+  reasoning?: string;
+  confidence?: number;
+  source?: string;
+}
+
+interface QuorumResult {
+  confidence_score: number;
+  [key: string]: unknown;
+}
+
+interface ChainReceiptData {
+  signature: string;
+  explorer_url: string;
 }
 
 export default function DebateArena() {
@@ -19,14 +36,13 @@ export default function DebateArena() {
   const [quorumThreshold, setQuorumThreshold] = useState<number>(0.75);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("idle");
   const [messages, setMessages] = useState<EventData[]>([]);
   
   // State from events
-  const [selectorResult, setSelectorResult] = useState<any>(null);
-  const [quorumResult, setQuorumResult] = useState<any>(null);
-  const [chainReceipt, setChainReceipt] = useState<any>(null);
+  const [selectorResult, setSelectorResult] = useState<SelectorResult | null>(null);
+  const [quorumResult, setQuorumResult] = useState<QuorumResult | null>(null);
+  const [chainReceipt, setChainReceipt] = useState<ChainReceiptData | null>(null);
   
   // Agents State
   // Map of agent specific state
@@ -56,7 +72,6 @@ export default function DebateArena() {
     if (!question.trim() || status === "running") return;
 
     // Reset state
-    setSessionId(null);
     setSelectorResult(null);
     setQuorumResult(null);
     setChainReceipt(null);
@@ -75,7 +90,6 @@ export default function DebateArena() {
         }),
       });
       const data = await res.json();
-      setSessionId(data.session_id);
       connectSSE(data.session_id);
     } catch (err) {
       console.error("Failed to start session", err);
@@ -116,14 +130,17 @@ export default function DebateArena() {
     };
   };
 
-  const handleEvent = (eventType: string, data: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleEvent = (eventType: string, data: Record<string, unknown> | any) => {
     if (eventType === "selector_decision") {
       setSelectorResult(data);
     }
     
     if (eventType === "debate_start" || eventType === "vote_start") {
-       const initialAgents: any = {};
-       data.agents.forEach((a: any) => {
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       const initialAgents: Record<string, any> = {};
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       (data.agents as any[]).forEach((a: any) => {
            initialAgents[a.name] = {
                persona: a.persona,
                status: 'idle'
