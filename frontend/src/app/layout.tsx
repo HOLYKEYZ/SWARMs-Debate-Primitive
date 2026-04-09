@@ -3,6 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SolanaProvider from "@/components/SolanaProvider";
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const WalletConnectButton = dynamic(
+  () => import('@solana/wallet-adapter-react-ui').then((mod) => mod.WalletMultiButton),
+  { ssr: false }
+);
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +45,7 @@ export default function RootLayout({
                 <Link href="/arena" className="text-sm font-medium text-white/50 hover:text-white transition-colors">Arena</Link>
                 <Link href="/sessions" className="text-sm font-medium text-white/50 hover:text-white transition-colors">Sessions</Link>
                 <Link href="/agents" className="text-sm font-medium text-white/50 hover:text-white transition-colors">Agents</Link>
-                {/* Dynamically load the wallet connect button later */}
+                <WalletConnectButton />
              </div>
           </div>
           {children}
