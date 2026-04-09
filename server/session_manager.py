@@ -29,10 +29,12 @@ class SessionEvent:
 
 class Session:
     """represents a single debate/vote session with its full lifecycle."""
-    def __init__(self, session_id: str, question: str, user_pubkey: str = None):
+    def __init__(self, session_id: str, question: str, user_pubkey: str = None, rounds: int = 3, quorum_threshold: float = 0.75):
         self.session_id = session_id
         self.question = question
         self.user_pubkey = user_pubkey
+        self.rounds = rounds
+        self.quorum_threshold = quorum_threshold
         self.status = "pending"  # pending -> selecting -> running -> hashing -> chain -> complete / failed
         self.mechanism = None
         self.selector_result = None
