@@ -30,6 +30,8 @@ manager = SessionManager()
 class SubmitRequest(BaseModel):
     question: str
     user_pubkey: str | None = None
+    rounds: int = 3
+    quorum_threshold: float = 0.75
 
 
 class SubmitResponse(BaseModel):
@@ -44,7 +46,12 @@ async def submit_session(req: SubmitRequest):
     if not req.question or not req.question.strip():
         raise HTTPException(status_code=400, detail="question is required")
 
-    session = manager.create_session(req.question.strip(), req.user_pubkey)
+    session = manager.create_session(
+        req.question.strip(), 
+        req.user_pubkey,
+        rounds=req.rounds,
+        quorum_threshold=req.quorum_threshold
+    )
 
     # start the pipeline in the background
     asyncio.create_task(manager.run_session(session))
