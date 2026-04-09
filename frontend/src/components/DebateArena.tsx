@@ -15,6 +15,10 @@ interface EventData {
 
 export default function DebateArena() {
   const [question, setQuestion] = useState("");
+  const [rounds, setRounds] = useState<number>(3);
+  const [quorumThreshold, setQuorumThreshold] = useState<number>(0.75);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("idle");
   const [messages, setMessages] = useState<EventData[]>([]);
@@ -64,7 +68,11 @@ export default function DebateArena() {
       const res = await fetch("http://localhost:8000/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ 
+           question,
+           rounds: rounds,
+           quorum_threshold: quorumThreshold
+        }),
       });
       const data = await res.json();
       setSessionId(data.session_id);
@@ -195,8 +203,56 @@ export default function DebateArena() {
             </button>
           </div>
           
+          {/* Advanced Settings Toggle */}
+          <div className="flex justify-between items-center mt-2">
+            <button 
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs text-white/40 hover:text-white transition-colors flex items-center gap-1"
+            >
+              {showAdvanced ? "Hide Advanced Settings" : "Show Advanced Settings"}
+            </button>
+          </div>
+
+          {/* Advanced Settings Panel */}
+          {showAdvanced && (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
+               <div className="flex flex-col gap-2">
+                  <label className="text-xs text-white/50 uppercase tracking-wider font-bold">
+                     Debate Rounds: {rounds}
+                  </label>
+                  <input 
+                     type="range" 
+                     min="1" 
+                     max="5" 
+                     step="1"
+                     value={rounds}
+                     onChange={(e) => setRounds(parseInt(e.target.value))}
+                     className="w-full accent-blue-500"
+                  />
+                  <span className="text-[10px] text-white/30">Number of deliberation cycles before finalizing consensus.</span>
+               </div>
+               
+               <div className="flex flex-col gap-2">
+                  <label className="text-xs text-white/50 uppercase tracking-wider font-bold">
+                     Quorum Threshold: {Math.round(quorumThreshold * 100)}%
+                  </label>
+                  <input 
+                     type="range" 
+                     min="0.51" 
+                     max="1.0" 
+                     step="0.01"
+                     value={quorumThreshold}
+                     onChange={(e) => setQuorumThreshold(parseFloat(e.target.value))}
+                     className="w-full accent-green-500"
+                  />
+                  <span className="text-[10px] text-white/30">Percentage of agents required to agree.</span>
+               </div>
+            </div>
+          )}
+
           {!isRunning && isIdle && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-4">
                <button 
                  type="button"
                  onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // No owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}

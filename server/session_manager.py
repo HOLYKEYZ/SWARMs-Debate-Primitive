@@ -91,9 +91,9 @@ class SessionManager:
     def __init__(self):
         self.sessions: dict[str, Session] = {}
 
-    def create_session(self, question: str, user_pubkey: str = None) -> Session:
+    def create_session(self, question: str, user_pubkey: str = None, rounds: int = 3, quorum_threshold: float = 0.75) -> Session:
         session_id = str(uuid.uuid4())
-        session = Session(session_id, question, user_pubkey)
+        session = Session(session_id, question, user_pubkey, rounds, quorum_threshold)
         self.sessions[session_id] = session
         return session
 
@@ -225,7 +225,7 @@ class SessionManager:
 
         session.emit("debate_start", {
             "agent_count": len(agents),
-            "rounds": config.DEBATE_ROUNDS,
+            "rounds": session.rounds,
             "agents": [{"name": a.name, "persona": a.persona_type} for a in agents]
         })
 
@@ -254,7 +254,7 @@ class SessionManager:
         session.emit("round_complete", {"round": 0})
 
         # rounds 1-N: debate with peer opinions
-        for r in range(1, config.DEBATE_ROUNDS + 1):
+        for r in range(1, session.rounds + 1):
             session.emit("round_start", {"round": r, "type": "debate"})
             previous_responses = all_rounds[-1]["responses"]
             new_round_responses = []
@@ -325,7 +325,7 @@ class SessionManager:
                 break
 
         confidence_score = winning_count / len(agents)
-        quorum_reached = confidence_score >= config.QUORUM_THRESHOLD
+        quorum_reached = confidence_score >= session.quorum_threshold
 
         return {
             "mechanism": "debate",
@@ -379,7 +379,7 @@ class SessionManager:
                 break
 
         confidence_score = winning_count / len(agents)
-        quorum_reached = confidence_score >= config.QUORUM_THRESHOLD
+        quorum_reached = confidence_score >= session.quorum_threshold
 
         return {
             "mechanism": "vote",
