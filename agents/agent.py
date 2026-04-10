@@ -27,6 +27,7 @@ class Agent:
         
         # Use provided key, or fallback to the first key in config
         key_to_use = api_key if api_key else config.GEMINI_API_KEYS[0]
+        self.api_key = key_to_use
         self.client = genai.Client(api_key=key_to_use)
 
     def _build_prompt(self, question: str, context: str = "", peer_opinions: list = None) -> str:
@@ -100,9 +101,11 @@ class Agent:
                           f"(attempt {attempt + 1}/{MAX_RETRIES})...")
                     time.sleep(delay)
                     continue
+                    continue
                 # non-retryable or exhausted retries
+                masked_key = f"...{self.api_key[-4:]}" if hasattr(self, 'api_key') and self.api_key else "unknown"
                 return {
                     "answer": "API Error",
                     "confidence": 0.0,
-                    "reasoning": str(e)
+                    "reasoning": f"Failed using key {masked_key}. Error details: {str(e)}"
                 }
