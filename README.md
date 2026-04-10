@@ -12,29 +12,38 @@ A multi-agent debate and vote coordination system that turns AI deliberation int
 
 1. **Prerequisites**: Minimum Python 3.11+.
 2. **Install Dependencies**:
+
 ```bash
 pip install -r requirements.txt
 # Alternatively: pip install google-genai solana solders python-dotenv
 ```
+
 3. **Configuration**:
-Create a `.env` file in the root directory and add your Gemini API Key:
+   Create a `.env` file in the root directory and add your Gemini API Key:
+
 ```env
 GEMINI_API_KEY="your-gemini-api-key-here"
 ```
+
 4. **Generate Solana Wallet**:
+
 ```bash
 python -c "from solders.keypair import Keypair; import json; kp = Keypair(); json.dump(list(bytes(kp)), open('wallet.json','w')); print('Public key:', kp.pubkey())"
 ```
-5. **Fund Wallet (Devnet)**: 
-Go to [Solana Devnet Faucet](https://faucet.solana.com/) to drop 1 SOL onto your generated Public Key.
+
+5. **Fund Wallet (Devnet)**:
+   Go to [Solana Devnet Faucet](https://faucet.solana.com/) to drop 1 SOL onto your generated Public Key.
 
 ## How to Run
 
 You can run the main pipeline natively:
+
 ```bash
-python main.py "Should AI systems be required to explain their decisions?"
+python main.py -- ask a question e.g #"Should AI systems be required to explain their decisions?"
 ```
+
 Or run the automated integration test suite:
+
 ```bash
 python test_run.py
 ```
@@ -43,7 +52,7 @@ python test_run.py
 
 ```text
 ================================================================================
- SWARMs DEBATE PRIMITIVE 
+ SWARMs DEBATE PRIMITIVE
 ================================================================================
 
 STEP 1: SELECTOR DECISION
@@ -66,7 +75,7 @@ Transaction submitted: 4sH...
 Waiting for confirmation (15s)...
 
 ================================================================================
- ON-CHAIN RECEIPT 
+ ON-CHAIN RECEIPT
 ================================================================================
 Question:       Should AI systems be required to explain their decisions?
 Mechanism:      debate
@@ -79,9 +88,11 @@ Verifiable at:  https://explorer.solana.com/tx/4sHpTp...?cluster=devnet
 ```
 
 ## Tech Stack
+
 - Python 3.11+
 - [Google GenAI SDK](https://github.com/googleapis/python-genai) (Gemini Models via API)
 - [Solana.py](https://michaelhly.github.io/solana-py/) & Solders (Solana Blockchain integration)
 
 ## Reference
+
 Based on concepts from the research paper ["Debate or Vote?"](https://arxiv.org/abs/2502.13110) (NeurIPS 2025).
