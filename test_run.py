@@ -12,7 +12,7 @@ def print_result(name, passed, detail=""):
 def test_1():
     print("\n--- Test 1: Vote on simple factual question ---")
     try:
-        q = "What is the boiling point of pure water in Celsius at sea level?"
+        q = "What is the boiling point of pure water in Kelvin at sea level?"
         res = run_vote(q, num_agents=3)
         # Should win with 100
         passed = "100" in res['winning_answer'] and res['quorum_reached']
