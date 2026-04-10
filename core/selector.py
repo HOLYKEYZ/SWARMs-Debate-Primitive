@@ -41,6 +41,7 @@ class MetaAgent:
 
     def __init__(self, api_key: str = None):
         key = api_key if api_key else config.GEMINI_API_KEYS[0]
+        self.api_key = key
         self.client = genai.Client(api_key=key)
 
     def analyze(self, question: str, num_agents: int = None) -> dict:
@@ -64,8 +65,13 @@ class MetaAgent:
         try:
             return self._ai_decide(question)
         except Exception as e:
-            print(f"  [meta-agent] ai analysis failed ({str(e)[:60]}), falling back to keywords")
-            return self._keyword_fallback(question)
+            masked = f"...{self.api_key[-4:]}" if hasattr(self, 'api_key') and self.api_key else "unknown"
+            err_msg = f"API Error (key {masked}): {str(e)[:60]}... Falling back to keywords."
+            print(f"  [meta-agent] {err_msg}")
+            
+            res = self._keyword_fallback(question)
+            res["reasoning"] = f"{err_msg} | {res['reasoning']}"
+            return res
 
     def _ai_decide(self, question: str) -> dict:
         """use gemini to reason about the question and pick a mechanism."""
