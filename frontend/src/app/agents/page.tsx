@@ -10,11 +10,11 @@ interface AgentStat {
   sessions_participated: number;
 }
 
-const personaColors: Record<string, {text: string, border: string, bg: string, ring: string, grad: string}> = {
-  Analyst: { text: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5', ring: 'group-hover:ring-cyan-500/50', grad: 'from-cyan-500/20 to-blue-500/5' },
-  Critic: { text: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/5', ring: 'group-hover:ring-rose-500/50', grad: 'from-rose-500/20 to-red-600/5' },
-  Advocate: { text: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5', ring: 'group-hover:ring-emerald-500/50', grad: 'from-emerald-500/20 to-green-600/5' },
-  Skeptic: { text: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/5', ring: 'group-hover:ring-amber-500/50', grad: 'from-amber-500/20 to-orange-600/5' },
+const personaColors: Record<string, {text: string, border: string, bg: string, ring: string, grad: string, shadow: string}> = {
+  Analyst: { text: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5', ring: 'group-hover:ring-cyan-500/50', grad: 'from-cyan-500/20 to-blue-500/5', shadow: 'hover:shadow-cyan-500/20' },
+  Critic: { text: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/5', ring: 'group-hover:ring-rose-500/50', grad: 'from-rose-500/20 to-red-600/5', shadow: 'hover:shadow-rose-500/20' },
+  Advocate: { text: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5', ring: 'group-hover:ring-emerald-500/50', grad: 'from-emerald-500/20 to-green-600/5', shadow: 'hover:shadow-emerald-500/20' },
+  Skeptic: { text: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/5', ring: 'group-hover:ring-amber-500/50', grad: 'from-amber-500/20 to-orange-600/5', shadow: 'hover:shadow-amber-500/20' },
 };
 
 export default function AgentsPage() {
@@ -63,7 +63,7 @@ export default function AgentsPage() {
               const theme = personaColors[agent.persona] || { text: 'text-white', border: 'border-white/30', bg: 'bg-white/5', ring: 'group-hover:ring-white/50', grad: 'from-white/10 to-transparent' };
               
               return (
-                <div key={agent.agent_id} className={`group glass-panel relative overflow-hidden rounded-3xl transition-glass hover:-translate-y-1 hover:shadow-2xl hover:shadow-${theme.text.split('-')[1]}-500/20 ring-1 ring-transparent ${theme.ring} border ${theme.border}`}>
+                <div key={agent.agent_id} className={`group glass-panel relative overflow-hidden rounded-3xl transition-glass hover:-translate-y-1 hover:shadow-2xl ${theme.shadow} ring-1 ring-transparent ${theme.ring} border ${theme.border}`}>
                   {/* Huge background number */}
                   <div className="absolute -right-6 -bottom-10 text-[12rem] font-black text-white/[0.02] pointer-events-none select-none transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-3">
                     {index + 1}
