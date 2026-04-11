@@ -10,11 +10,11 @@ interface AgentStat {
   sessions_participated: number;
 }
 
-const personaColors: Record<string, string> = {
-  Analyst: 'text-cyan-400 border-cyan-400/30 bg-cyan-400/10',
-  Critic: 'text-red-400 border-red-400/30 bg-red-400/10',
-  Advocate: 'text-green-400 border-green-400/30 bg-green-400/10',
-  Skeptic: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
+const personaColors: Record<string, {text: string, border: string, bg: string, ring: string, grad: string}> = {
+  Analyst: { text: 'text-cyan-400', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5', ring: 'group-hover:ring-cyan-500/50', grad: 'from-cyan-500/20 to-blue-500/5' },
+  Critic: { text: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/5', ring: 'group-hover:ring-rose-500/50', grad: 'from-rose-500/20 to-red-600/5' },
+  Advocate: { text: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5', ring: 'group-hover:ring-emerald-500/50', grad: 'from-emerald-500/20 to-green-600/5' },
+  Skeptic: { text: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/5', ring: 'group-hover:ring-amber-500/50', grad: 'from-amber-500/20 to-orange-600/5' },
 };
 
 export default function AgentsPage() {
@@ -35,67 +35,78 @@ export default function AgentsPage() {
   }, []);
 
   return (
-    <main className="min-h-screen pt-32 px-6 flex flex-col items-center relative overflow-hidden pb-20">
+    <main className="min-h-screen pt-40 px-6 flex flex-col items-center relative overflow-hidden pb-20">
       {/* Background glow effects */}
-      <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
       
-      <div className="w-full max-w-4xl mb-12 flex flex-col items-center text-center">
-         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 mb-4 text-[10px] uppercase tracking-widest font-bold text-white/50">
-            <Network className="w-3 h-3 text-blue-400" /> PROVABLE IDENTITY
+      <div className="w-full max-w-5xl mb-16 flex flex-col items-center text-center z-10">
+         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-6 text-[11px] uppercase tracking-[0.2em] font-bold text-white/60 backdrop-blur-md">
+            <Network className="w-3.5 h-3.5 text-blue-400" /> PROVABLE IDENTITY
          </div>
-         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white/90 to-white/30 mb-6 drop-shadow-sm">
             Agent Reputation
          </h1>
-         <p className="text-white/50 max-w-2xl">
-            Each AI persona has a persistent UUID. Their historical performance in finding consensus is tracked and logged on the Solana Devnet.
+         <p className="text-lg text-white/50 max-w-2xl font-light leading-relaxed">
+            Each AI persona is anchored by a persistent UUID. Their historical performance in driving toward consensus is tracked and cryptographically logged on the Solana Devnet.
          </p>
       </div>
 
-      <div className="w-full max-w-4xl flex flex-col gap-4">
+      <div className="w-full max-w-5xl">
         {loading ? (
           <div className="flex justify-center py-20">
-             <Loader2 className="w-8 h-8 text-white/30 animate-spin" />
+             <Loader2 className="w-10 h-10 text-white/30 animate-spin" />
           </div>
         ) : (
-          agents.map((agent, index) => {
-            const colorClass = personaColors[agent.persona] || 'text-white border-white/30 bg-white/10';
-            const bgTint = colorClass.split(' ')[2];
-            
-            return (
-              <div key={agent.agent_id} className={`glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:scale-[1.01] ${bgTint}`}>
-                <div className="flex items-center gap-6 w-full md:w-auto">
-                   <div className="text-3xl font-bold text-white/20 w-8 text-center">
-                      #{index + 1}
-                   </div>
-                   <div>
-                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                       {agent.persona}
-                       {index === 0 && <Trophy className="w-4 h-4 text-yellow-400" />}
-                     </h3>
-                     <div className="font-mono text-xs text-white/40 mt-1 break-all bg-black/40 px-2 py-1 rounded inline-block">
-                       {agent.agent_id}
-                     </div>
-                   </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 z-10 relative">
+            {agents.map((agent, index) => {
+              const theme = personaColors[agent.persona] || { text: 'text-white', border: 'border-white/30', bg: 'bg-white/5', ring: 'group-hover:ring-white/50', grad: 'from-white/10 to-transparent' };
+              
+              return (
+                <div key={agent.agent_id} className={`group glass-panel relative overflow-hidden rounded-3xl transition-glass hover:-translate-y-1 hover:shadow-2xl hover:shadow-${theme.text.split('-')[1]}-500/20 ring-1 ring-transparent ${theme.ring} border ${theme.border}`}>
+                  {/* Huge background number */}
+                  <div className="absolute -right-6 -bottom-10 text-[12rem] font-black text-white/[0.02] pointer-events-none select-none transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-3">
+                    {index + 1}
+                  </div>
+                  
+                  {/* Subtle top gradient glow */}
+                  <div className={`absolute top-0 left-0 right-0 h-32 bg-gradient-to-b ${theme.grad} opacity-50 pointer-events-none`} />
 
-                <div className="flex gap-8 w-full md:w-auto justify-between md:justify-end border-t border-white/10 md:border-t-0 pt-4 md:pt-0 mt-2 md:mt-0">
-                   <div className="text-center">
-                      <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Sessions</div>
-                      <div className="text-xl font-bold text-white flex items-center justify-center gap-1">
-                        <Activity className="w-4 h-4 text-white/30" /> {agent.sessions_participated}
+                  <div className="relative p-8 flex flex-col h-full justify-between gap-8 z-10">
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className={`text-3xl font-black tracking-tight ${theme.text} flex items-center gap-3 drop-shadow-md`}>
+                          {agent.persona}
+                          {index === 0 && <Trophy className="w-6 h-6 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]" />}
+                        </h3>
+                        <div className="text-lg font-black text-white/20">
+                          #{index + 1}
+                        </div>
                       </div>
-                   </div>
-                   <div className="text-center">
-                      <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Reputation</div>
-                      <div className={`text-2xl font-bold ${colorClass.split(' ')[0]}`}>
-                        {agent.reputation_score > 0 ? '+' : ''}{agent.reputation_score}
+                      <div className="font-mono text-sm text-white/50 truncate bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/5 inline-block max-w-full">
+                        {agent.agent_id}
                       </div>
-                   </div>
+                    </div>
+
+                    <div className="flex gap-6 items-end">
+                      <div className="flex-1 bg-black/20 rounded-2xl p-4 border border-white/5">
+                        <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2">Sessions</div>
+                        <div className="text-2xl font-bold text-white flex items-center gap-2">
+                          <Activity className="w-5 h-5 text-white/30" /> {agent.sessions_participated}
+                        </div>
+                      </div>
+                      <div className={`flex-1 bg-gradient-to-br ${theme.bg} rounded-2xl p-4 border ${theme.border}`}>
+                        <div className={`text-[10px] uppercase tracking-widest ${theme.text} opacity-70 font-bold mb-2`}>Reputation</div>
+                        <div className={`text-3xl font-black ${theme.text} tracking-tighter`}>
+                          {agent.reputation_score > 0 ? '+' : ''}{agent.reputation_score}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
     </main>
