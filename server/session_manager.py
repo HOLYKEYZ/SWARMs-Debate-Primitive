@@ -371,7 +371,7 @@ class SessionManager:
                     "position_changed": changed,
                     "old_answer": prev_answer if changed else None,
                 })
-                time.sleep(1)
+                await asyncio.sleep(2)
 
             all_rounds.append({"round": r, "responses": new_round_responses})
             session.emit("round_complete", {"round": r})
