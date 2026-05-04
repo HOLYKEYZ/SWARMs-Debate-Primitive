@@ -428,7 +428,7 @@ class SessionManager:
                 "confidence": result.get("confidence", 0),
                 "reasoning": result.get("reasoning", ""),
             })
-            time.sleep(1)
+            await asyncio.sleep(2)
 
         # tally
         answers = [r["response"].get("answer", "").strip().lower() for r in responses]
