@@ -17,12 +17,12 @@
 }
 
 body {
-  background: var(--background);
+  background: #050505;
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
-  background-image: radial-gradient(circle at 50% -20%, rgba(30, 25, 60, 1) 0%, rgba(5, 5, 8, 1) 100%);
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
+  overflow-x: hidden;
 }
 
 /* Subtle grain texture to remove the "flat" look */
