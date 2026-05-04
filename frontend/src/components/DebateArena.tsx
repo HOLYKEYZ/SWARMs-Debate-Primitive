@@ -229,25 +229,41 @@ export default function DebateArena() {
       ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-8 pb-20 items-start">
+    <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-12 pb-20 items-start pt-32 px-6">
       
       {/* Left Sidebar: History */}
       <div className="hidden lg:block sticky top-32">
         <SessionHistory 
           sessions={history} 
           onSelect={(id) => {
-             // In a real app, we'd load the full session state. For now, we just highlight.
              setActiveSessionId(id);
           }} 
           activeId={activeSessionId || undefined} 
         />
       </div>
 
-      <div className="flex-1 flex flex-col gap-8 w-full">
-        {/* Pipeline Step Indicator */}
-        {(status !== 'idle' || activeSessionId) && (
-          <LivePipeline currentStatus={status} />
-        )}
+      <div className="flex-1 flex flex-col gap-10 w-full max-w-4xl">
+        {/* Header & Pipeline */}
+        <div className="flex flex-col gap-6">
+           <div className="flex justify-between items-end">
+              <div>
+                <h1 className="text-4xl font-black tracking-tighter text-white mb-2">Arena</h1>
+                <p className="text-sm text-white/30 font-medium">Provable multi-agent deliberation</p>
+              </div>
+              {sessionActive && (
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Live</span>
+                </div>
+              )}
+           </div>
+           
+           {(status !== 'idle' || activeSessionId) && (
+             <div className="p-1">
+               <LivePipeline currentStatus={status} />
+             </div>
+           )}
+        </div>
 
         {/* Input Section */}
       <div className="glass-panel p-6 rounded-2xl border-white/10 animate-in fade-in slide-in-from-top-4 duration-700">

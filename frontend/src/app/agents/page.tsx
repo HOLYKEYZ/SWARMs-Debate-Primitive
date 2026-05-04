@@ -36,18 +36,14 @@ export default function AgentsPage() {
 
   return (
     <main className="min-h-screen pt-40 px-6 flex flex-col items-center relative overflow-hidden pb-20">
-      {/* Background glow effects */}
-      <div className="absolute top-1/2 left-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
-      
       <div className="w-full max-w-5xl mb-16 flex flex-col items-center text-center z-10">
-         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-6 text-[11px] uppercase tracking-[0.2em] font-bold text-white/60 backdrop-blur-md">
+         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/5 mb-6 text-[11px] uppercase tracking-[0.2em] font-bold text-white/40 backdrop-blur-md">
             <Network className="w-3.5 h-3.5 text-blue-400" /> PROVABLE IDENTITY
          </div>
-         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-white/90 to-white/30 mb-6 drop-shadow-sm">
+         <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-6">
             Agent Reputation
          </h1>
-         <p className="text-lg text-white/50 max-w-2xl font-light leading-relaxed">
+         <p className="text-lg text-white/40 max-w-2xl font-medium leading-relaxed">
             Each AI persona is anchored by a persistent UUID. Their historical performance in driving toward consensus is tracked and cryptographically logged on the Solana Devnet.
          </p>
       </div>

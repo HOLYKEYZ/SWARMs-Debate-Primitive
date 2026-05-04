@@ -182,13 +182,9 @@ class SessionManager:
             agents = self._create_agents(session)
 
             if session.mechanism == "debate":
-                session_data = await asyncio.to_thread(
-                    self._run_debate, session.question, session, agents
-                )
+                session_data = await self._run_debate(session.question, session, agents)
             else:
-                session_data = await asyncio.to_thread(
-                    self._run_vote, session.question, session, agents
-                )
+                session_data = await self._run_vote(session.question, session, agents)
 
             session.session_data = session_data
 
@@ -281,7 +277,7 @@ class SessionManager:
         meta = MetaAgent()
         return meta.analyze(question)
 
-    def _run_debate(self, question: str, session: Session, agents: list[Agent]) -> dict:
+    async def _run_debate(self, question: str, session: Session, agents: list[Agent]) -> dict:
         """run debate with event emissions for each agent action."""
         num_rounds = session.rounds
         all_rounds = []
@@ -298,7 +294,7 @@ class SessionManager:
         round_responses = []
         for agent in agents:
             session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = agent.generate_response(question=question)
+            result = await asyncio.to_thread(agent.generate_response, question)
             round_responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,
@@ -334,9 +330,8 @@ class SessionManager:
                     "round": r, "peers": len(peer_opinions)
                 })
 
-                result = agent.generate_response(
-                    question=question,
-                    peer_opinions=peer_opinions
+                result = await asyncio.to_thread(
+                    agent.generate_response, question, "", peer_opinions
                 )
                 new_round_responses.append({
                     "name": agent.name,
@@ -403,7 +398,7 @@ class SessionManager:
             "position_changes": position_changes,
         }
 
-    def _run_vote(self, question: str, session: Session, agents: list[Agent]) -> dict:
+    async def _run_vote(self, question: str, session: Session, agents: list[Agent]) -> dict:
         """run vote with event emissions for each agent action."""
         responses = []
 
@@ -414,7 +409,7 @@ class SessionManager:
 
         for agent in agents:
             session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = agent.generate_response(question=question)
+            result = await asyncio.to_thread(agent.generate_response, question)
             responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,

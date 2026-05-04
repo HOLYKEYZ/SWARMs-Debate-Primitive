@@ -32,22 +32,27 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col selection:bg-blue-500/30">
         <SolanaProvider>
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-50 pointer-events-none">
-            <div className="glass-panel px-6 py-4 flex justify-between items-center pointer-events-auto rounded-full border border-white/10 shadow-2xl">
-               <div className="font-bold text-2xl tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-4xl z-50 pointer-events-none">
+            <div className="glass-panel px-8 py-3 flex justify-between items-center pointer-events-auto rounded-2xl border border-white/5 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+               <div className="font-black text-xl tracking-tighter text-white flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                   <Link href="/">SWARMs</Link>
                </div>
-               <div className="flex gap-6 items-center">
-                  <Link href="/arena" className="text-sm font-semibold text-white/60 hover:text-white transition-colors">Arena</Link>
-                  <Link href="/sessions" className="text-sm font-semibold text-white/60 hover:text-white transition-colors">Sessions</Link>
-                  <Link href="/agents" className="text-sm font-semibold text-white/60 hover:text-white transition-colors">Agents</Link>
-                  <div className="pl-4 border-l border-white/10">
+               <div className="flex gap-8 items-center">
+                  <nav className="flex gap-6 items-center">
+                    <Link href="/arena" className="text-[11px] uppercase tracking-widest font-black text-white/40 hover:text-white transition-all">Arena</Link>
+                    <Link href="/sessions" className="text-[11px] uppercase tracking-widest font-black text-white/40 hover:text-white transition-all">Sessions</Link>
+                    <Link href="/agents" className="text-[11px] uppercase tracking-widest font-black text-white/40 hover:text-white transition-all">Agents</Link>
+                  </nav>
+                  <div className="pl-6 border-l border-white/5">
                     <WalletButton />
                   </div>
                </div>
             </div>
           </div>
-          {children}
+          <div className="flex-1 overflow-auto">
+            {children}
+          </div>
         </SolanaProvider>
       </body>
     </html>
