@@ -5,7 +5,10 @@ import AgentCard from './AgentCard';
 import MetaAgentBanner from './MetaAgentBanner';
 import QuorumMeter from './QuorumMeter';
 import ChainReceipt from './ChainReceipt';
-import { Send, Loader2, Play } from 'lucide-react';
+import LivePipeline from './LivePipeline';
+import SessionHistory from './SessionHistory';
+import ConsensusReport from './ConsensusReport';
+import { Send, Loader2, Play, LayoutGrid } from 'lucide-react';
 
 interface EventData {
   event: string;
@@ -43,9 +46,9 @@ export default function DebateArena() {
   const [selectorResult, setSelectorResult] = useState<SelectorResult | null>(null);
   const [quorumResult, setQuorumResult] = useState<QuorumResult | null>(null);
   const [chainReceipt, setChainReceipt] = useState<ChainReceiptData | null>(null);
+  const [synthesisReport, setSynthesisReport] = useState<any | null>(null);
   
   // Agents State
-  // Map of agent specific state
   const [agents, setAgents] = useState<{
       [name: string]: {
           persona: string;
@@ -54,18 +57,33 @@ export default function DebateArena() {
           reasoning?: string;
           confidence?: number;
           positionChanged?: boolean;
+          retryMessage?: string;
       }
   }>({});
+
+  const [history, setHistory] = useState<any[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    fetchHistory();
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
     };
   }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch("http://localhost:8000/api/sessions");
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +93,7 @@ export default function DebateArena() {
     setSelectorResult(null);
     setQuorumResult(null);
     setChainReceipt(null);
+    setSynthesisReport(null);
     setMessages([]);
     setAgents({});
     setStatus("submitting");
@@ -115,6 +134,7 @@ export default function DebateArena() {
         if (payload.event === "session_complete" || payload.event === "error") {
           es.close();
           setStatus(payload.event === "error" ? "failed" : "complete");
+          fetchHistory(); // Refresh history
         }
       } catch (e) {
         console.error("Error parsing SSE data", e);
@@ -165,7 +185,19 @@ export default function DebateArena() {
                answer: data.answer,
                reasoning: data.reasoning,
                confidence: data.confidence,
-               positionChanged: data.positionChanged
+               positionChanged: data.positionChanged,
+               retryMessage: undefined
+           }
+       }));
+    }
+
+    if (eventType === "agent_retry") {
+       setAgents(prev => ({
+           ...prev,
+           [data.agent]: { 
+               ...prev[data.agent], 
+               status: 'thinking',
+               retryMessage: data.message
            }
        }));
     }
@@ -176,6 +208,10 @@ export default function DebateArena() {
 
     if (eventType === "chain_receipt") {
        setChainReceipt(data);
+    }
+
+    if (eventType === "synthesis_report") {
+       setSynthesisReport(data);
     }
   };
 
@@ -193,31 +229,51 @@ export default function DebateArena() {
       ];
 
   return (
-    <div className="w-full max-w-6xl mx-auto flex flex-col gap-8 pb-20">
+    <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-8 pb-20 items-start">
       
-      {/* Input Section */}
+      {/* Left Sidebar: History */}
+      <div className="hidden lg:block sticky top-32">
+        <SessionHistory 
+          sessions={history} 
+          onSelect={(id) => {
+             // In a real app, we'd load the full session state. For now, we just highlight.
+             setActiveSessionId(id);
+          }} 
+          activeId={activeSessionId || undefined} 
+        />
+      </div>
+
+      <div className="flex-1 flex flex-col gap-8 w-full">
+        {/* Pipeline Step Indicator */}
+        {(status !== 'idle' || activeSessionId) && (
+          <LivePipeline currentStatus={status} />
+        )}
+
+        {/* Input Section */}
       <div className="glass-panel p-6 rounded-2xl border-white/10 animate-in fade-in slide-in-from-top-4 duration-700">
         <h2 className="text-sm font-bold tracking-widest uppercase text-white/50 mb-4 flex items-center gap-2">
             <Play className="w-4 h-4" /> Start Deliberation
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input 
-              type="text" 
+          <div className="flex flex-col gap-4">
+            <textarea 
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               disabled={isRunning}
+              rows={question.includes('\n') ? Math.min(question.split('\n').length, 10) : 1}
               placeholder="e.g. Should we deploy this smart contract to mainnet?"
-              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20"
+              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-none font-sans leading-relaxed"
             />
-            <button 
-              type="submit" 
-              disabled={isRunning || !question.trim()}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
-            >
-              {isRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              {isRunning ? 'Processing...' : 'Submit'}
-            </button>
+            <div className="flex justify-end">
+              <button 
+                type="submit" 
+                disabled={isRunning || !question.trim()}
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white px-10 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all min-w-[160px]"
+              >
+                {isRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                {isRunning ? 'Processing...' : 'Submit'}
+              </button>
+            </div>
           </div>
           
           {/* Advanced Settings Toggle */}
@@ -307,25 +363,31 @@ export default function DebateArena() {
             confidence={agent.confidence}
             isActive={agent.status === 'thinking'}
             positionChanged={agent.positionChanged}
+            retryMessage={agent.retryMessage}
           />
         ))}
       </div>
 
-      {/* Quorum / Receipt Section */}
-      {quorumResult && (
-        <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
-           <QuorumMeter confidence={quorumResult.confidence_score} />
-           
-           {chainReceipt && (
-              <ChainReceipt 
-                signature={chainReceipt.signature}
-                hash={messages.find(m => m.event === 'transcript_hashed')?.data.hash || ''}
-                explorerUrl={chainReceipt.explorer_url}
-              />
-           )}
-        </div>
-      )}
+        {/* Quorum / Receipt Section */}
+        {(quorumResult || synthesisReport) && (
+          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
+             {quorumResult && <QuorumMeter confidence={quorumResult.confidence_score} />}
+             
+             {synthesisReport && (
+               <ConsensusReport {...synthesisReport} />
+             )}
+             
+             {chainReceipt && (
+                <ChainReceipt 
+                  signature={chainReceipt.signature}
+                  hash={messages.find(m => m.event === 'transcript_hashed')?.data.hash || ''}
+                  explorerUrl={chainReceipt.explorer_url}
+                />
+             )}
+          </div>
+        )}
 
+      </div>
     </div>
   );
 }

@@ -7,8 +7,10 @@ from collections import Counter
 
 from agents.agent import Agent
 from core.selector import MetaAgent
+from core.synthesis import SynthesisAgent
 from chain.transcript import create_transcript
 from chain.solana_client import SolanaClient
+from server.database import SessionLocal, SessionModel, init_db
 import config
 
 
@@ -86,15 +88,63 @@ class Session:
 
 
 class SessionManager:
-    """manages all active and completed sessions."""
+    """manages all active and completed sessions with sqlite persistence."""
 
     def __init__(self):
+        init_db()
         self.sessions: dict[str, Session] = {}
+        self._load_from_db()
+
+    def _load_from_db(self):
+        """load past sessions into memory cache on startup."""
+        db = SessionLocal()
+        try:
+            models = db.query(SessionModel).all()
+            for m in models:
+                s = Session(m.id, m.question, m.user_pubkey)
+                s.status = m.status
+                s.mechanism = m.mechanism
+                s.selector_result = m.selector_result
+                s.session_data = m.session_data
+                s.chain_signature = m.chain_signature
+                s.chain_verified = m.chain_verified
+                s.created_at = m.created_at.isoformat() if m.created_at else s.created_at
+                # transcript_data mock as we only store hash in DB
+                if m.transcript_hash:
+                    s.transcript_data = {"hash": m.transcript_hash}
+                self.sessions[m.id] = s
+            print(f"  [manager] loaded {len(models)} sessions from database.")
+        finally:
+            db.close()
+
+    def _save_to_db(self, session: Session):
+        """persist or update a session in the database."""
+        db = SessionLocal()
+        try:
+            model = db.query(SessionModel).filter(SessionModel.id == session.session_id).first()
+            if not model:
+                model = SessionModel(id=session.session_id, question=session.question, user_pubkey=session.user_pubkey)
+                db.add(model)
+            
+            model.status = session.status
+            model.mechanism = session.mechanism
+            model.selector_result = session.selector_result
+            model.session_data = session.session_data
+            model.transcript_hash = session.transcript_data["hash"] if session.transcript_data else None
+            model.chain_signature = session.chain_signature
+            model.chain_verified = session.chain_verified
+            
+            db.commit()
+        except Exception as e:
+            print(f"  [error] database save failed: {e}")
+        finally:
+            db.close()
 
     def create_session(self, question: str, user_pubkey: str = None, rounds: int = 3, quorum_threshold: float = 0.75) -> Session:
         session_id = str(uuid.uuid4())
         session = Session(session_id, question, user_pubkey, rounds, quorum_threshold)
         self.sessions[session_id] = session
+        self._save_to_db(session)
         return session
 
     def get_session(self, session_id: str) -> Session | None:
@@ -129,13 +179,15 @@ class SessionManager:
             session.status = "running"
             session.emit("status", {"status": "running", "message": f"Starting {session.mechanism}..."})
 
+            agents = self._create_agents(session)
+
             if session.mechanism == "debate":
                 session_data = await asyncio.to_thread(
-                    self._run_debate, session.question, session
+                    self._run_debate, session.question, session, agents
                 )
             else:
                 session_data = await asyncio.to_thread(
-                    self._run_vote, session.question, session
+                    self._run_vote, session.question, session, agents
                 )
 
             session.session_data = session_data
@@ -164,6 +216,17 @@ class SessionManager:
                     "hash": transcript_data["hash"],
                     "session_id": transcript_data["session_id"],
                 })
+            else:
+                # PRODUCTION UPGRADE: Synthesis for non-quorum debates
+                session.status = "synthesizing"
+                session.emit("status", {"status": "synthesizing", "message": "No quorum. Synthesizing compromise report..."})
+                
+                syn_agent = SynthesisAgent()
+                rounds_data = session_data.get("rounds", [])
+                synthesis = await asyncio.to_thread(syn_agent.synthesize, session.question, rounds_data)
+                
+                session.session_data["synthesis_report"] = synthesis
+                session.emit("synthesis_report", synthesis)
 
                 # step 5: on-chain logging
                 session.status = "chain"
@@ -205,6 +268,7 @@ class SessionManager:
 
             # done
             session.status = "complete"
+            self._save_to_db(session)
             session.emit("status", {"status": "complete", "message": "Session complete."})
             session.emit("session_complete", session.to_dict())
 
@@ -217,17 +281,17 @@ class SessionManager:
         meta = MetaAgent()
         return meta.analyze(question)
 
-    def _run_debate(self, question: str, session: Session) -> dict:
+    def _run_debate(self, question: str, session: Session, agents: list[Agent]) -> dict:
         """run debate with event emissions for each agent action."""
-        agents = self._create_agents()
+        num_rounds = session.rounds
         all_rounds = []
-        position_changes = []
 
         session.emit("debate_start", {
             "agent_count": len(agents),
             "rounds": session.rounds,
             "agents": [{"name": a.name, "persona": a.persona_type} for a in agents]
         })
+        position_changes = []
 
         # round 0: initial opinions
         session.emit("round_start", {"round": 0, "type": "initial"})
@@ -248,8 +312,9 @@ class SessionManager:
                 "confidence": result.get("confidence", 0),
                 "reasoning": result.get("reasoning", ""),
             })
-            time.sleep(1)
-
+            # PRODUCTION UPGRADE: Sequential throttle to prevent project-level 429s
+            await asyncio.sleep(2) 
+        
         all_rounds.append({"round": 0, "responses": round_responses})
         session.emit("round_complete", {"round": 0})
 
@@ -338,9 +403,8 @@ class SessionManager:
             "position_changes": position_changes,
         }
 
-    def _run_vote(self, question: str, session: Session) -> dict:
+    def _run_vote(self, question: str, session: Session, agents: list[Agent]) -> dict:
         """run vote with event emissions for each agent action."""
-        agents = self._create_agents()
         responses = []
 
         session.emit("vote_start", {
@@ -392,15 +456,26 @@ class SessionManager:
             "quorum_reached": quorum_reached,
         }
 
-    def _create_agents(self) -> list[Agent]:
-        """create agents with rotating api keys."""
-        persona_types = list(Agent.PERSONAS.keys())
-        agents = []
-        num_keys = len(config.GEMINI_API_KEYS)
+    def _create_agents(self, session: Session) -> list[Agent]:
+        """initialize agents for the session with rate-limit tracking."""
+        keys = config.GEMINI_API_KEYS
+        personas = list(Agent.PERSONAS.keys())
+        
+        def on_agent_retry(name, attempt, delay):
+            session.emit("agent_retry", {
+                "agent": name,
+                "attempt": attempt,
+                "delay": delay,
+                "message": f"Rate limit hit. Retrying in {delay}s..."
+            })
 
+        agents = []
         for i in range(config.NUM_AGENTS):
-            persona = persona_types[i % len(persona_types)]
-            name = f"Agent_{i+1}_{persona}"
-            assigned_key = config.GEMINI_API_KEYS[i % num_keys]
-            agents.append(Agent(name=name, persona_type=persona, api_key=assigned_key))
+            p_type = personas[i % len(personas)]
+            agents.append(Agent(
+                name=f"Agent_{i+1}_{p_type}", 
+                persona_type=p_type, 
+                api_keys=keys,
+                on_retry=on_agent_retry
+            ))
         return agents

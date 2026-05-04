@@ -16,6 +16,7 @@ interface AgentCardProps {
   reasoning?: string;
   confidence?: number;
   positionChanged?: boolean;
+  retryMessage?: string;
 }
 
 const personaColors: Record<string, string> = {
@@ -33,7 +34,8 @@ export default function AgentCard({
   answer, 
   reasoning, 
   confidence, 
-  positionChanged 
+  positionChanged,
+  retryMessage 
 }: AgentCardProps) {
   
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
@@ -64,27 +66,34 @@ export default function AgentCard({
              <User className="w-5 h-5" />
           )}
         </div>
-        <div>
-          <h3 className="font-bold text-white tracking-tight">{name}</h3>
-          <p className={cn("text-xs font-mono font-medium uppercase tracking-wider", colorClass.split(' ')[0])}>
-            {persona}
-          </p>
+        <div className="flex flex-col gap-1">
+          <h3 className="text-sm font-black text-white/90 tracking-tight group-hover:text-white transition-colors">{name}</h3>
+          <span className={cn("text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
+            {retryMessage ? 'Rate Limited' : persona}
+          </span>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col justify-center">
-        {status === 'idle' && !answer && (
+      <div className="flex-1 flex flex-col justify-center min-h-[60px] relative">
+        {retryMessage ? (
+          <div className="flex flex-col gap-2 items-center text-center animate-in fade-in zoom-in">
+            <p className="text-xs font-medium text-amber-400/80 italic">{retryMessage}</p>
+            <div className="flex gap-1">
+              <div className="w-1 h-1 rounded-full bg-amber-500 animate-bounce [animation-delay:-0.3s]" />
+              <div className="w-1 h-1 rounded-full bg-amber-500 animate-bounce [animation-delay:-0.15s]" />
+              <div className="w-1 h-1 rounded-full bg-amber-500 animate-bounce" />
+            </div>
+          </div>
+        ) : status === 'idle' && !answer ? (
           <div className="text-white/30 text-sm font-medium flex items-center justify-center h-full gap-2">
             Waiting for turn...
           </div>
-        )}
-        
-        {status === 'thinking' && (
+        ) : status === 'thinking' ? (
           <div className="text-white/60 text-sm font-medium flex items-center gap-2 animate-pulse">
             <RefreshCw className="w-4 h-4 animate-spin" /> Analyzing context...
           </div>
-        )}
+        ) : null}
 
         {(status === 'responded' || answer) && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">

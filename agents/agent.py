@@ -12,23 +12,35 @@ BASE_RETRY_DELAY = 15
 
 class Agent:
     PERSONAS = {
-        "Analyst": "You are an Analyst. You focus on data, logic, and factual accuracy. Break problems down systematically.",
-        "Critic": "You are a Critic. Your role is to find flaws, edge cases, and weaknesses in proposed ideas or peer opinions.",
-        "Advocate": "You are an Advocate. Your role is to find the most optimistic and beneficial aspects of ideas, supporting them constructively.",
-        "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing with any conclusion."
+        "Analyst": "You are an Analyst. You focus on data, logic, and factual accuracy. Break problems down systematically. If you see contradictions in peer data, point them out.",
+        "Critic": "You are a Critic. Your role is to find flaws, edge cases, and weaknesses in proposed ideas or peer opinions. Be rigorous but constructive.",
+        "Advocate": "You are an Advocate. Your role is to find the most optimistic and beneficial aspects of ideas, supporting them constructively. Try to build bridges between disagreeing agents.",
+        "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing. You should remain cautious until at least round 2."
     }
 
-    def __init__(self, name: str, persona_type: str, api_key: str = None):
+    def __init__(self, name: str, persona_type: str, api_keys: list[str] = None, on_retry: callable = None):
         if persona_type not in self.PERSONAS:
             raise ValueError(f"Unknown persona type: {persona_type}")
         self.name = name
         self.persona_type = persona_type
         self.system_prompt = self.PERSONAS[persona_type]
+        self.on_retry = on_retry
         
-        # Use provided key, or fallback to the first key in config
-        key_to_use = api_key if api_key else config.GEMINI_API_KEYS[0]
-        self.api_key = key_to_use
-        self.client = genai.Client(api_key=key_to_use)
+        # Use provided keys, or fallback to config
+        self.api_keys = api_keys if api_keys else config.GEMINI_API_KEYS
+        self.current_key_index = 0
+        self._init_client()
+
+    def _init_client(self):
+        """initialize the genai client with the current key."""
+        key = self.api_keys[self.current_key_index % len(self.api_keys)]
+        self.client = genai.Client(api_key=key)
+
+    def _rotate_key(self):
+        """switch to the next available key in the pool."""
+        self.current_key_index += 1
+        self._init_client()
+        print(f"    [failover] {self.name} rotating to key #{self.current_key_index % len(self.api_keys) + 1}")
 
     def _build_prompt(self, question: str, context: str = "", peer_opinions: list = None) -> str:
         """build the user prompt from question, context, and peer opinions."""
@@ -37,12 +49,15 @@ class Agent:
             user_content += f"Context: {context}\n\n"
 
         if peer_opinions and len(peer_opinions) > 0:
-            user_content += "Here are the recent opinions from other agents:\n"
-            for op in peer_opinions:
+            user_content += "Here are the most recent perspectives from the swarm:\n"
+            # PRODUCTION UPGRADE: Only show the most recent opinions to prevent context flooding
+            # We keep only the last N opinions if the list is huge
+            recent_opinions = peer_opinions[-6:] 
+            for op in recent_opinions:
                 user_content += f"--- {op['name']} ({op['persona']}) ---\n"
                 user_content += f"Answer: {op['response']['answer']}\n"
                 user_content += f"Reasoning: {op['response']['reasoning']}\n\n"
-            user_content += "Use these opinions carefully to formulate or revise your answer.\n\n"
+            user_content += "Critically evaluate these perspectives. If you agree with a peer, explain why. If you disagree, provide a logical counter-argument.\n\n"
 
         user_content += (
             "Please provide your response strictly in the following JSON format "
@@ -94,13 +109,25 @@ class Agent:
             except Exception as e:
                 error_str = str(e).lower()
                 is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str or "quota" in error_str
-                if is_retryable and attempt < MAX_RETRIES - 1:
-                    delay = BASE_RETRY_DELAY * (2 ** attempt)
-                    print(f"    [error details] {str(e)[:100]}...")
-                    print(f"    [retry] {self.name} hit rate limit, waiting {delay}s "
-                          f"(attempt {attempt + 1}/{MAX_RETRIES})...")
-                    time.sleep(delay)
-                    continue
+                if is_retryable:
+                    # PRODUCTION UPGRADE: Instant Failover
+                    # Try rotating keys before sleeping
+                    if attempt < len(self.api_keys):
+                        self._rotate_key()
+                        if self.on_retry:
+                            self.on_retry(self.name, attempt + 1, 0) # 0 delay for failover
+                        continue 
+                    
+                    # If we've tried all keys, then sleep
+                    if attempt < MAX_RETRIES - 1:
+                        delay = BASE_RETRY_DELAY * (2 ** (attempt - len(self.api_keys) + 1))
+                        print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{MAX_RETRIES})...")
+                        
+                        if self.on_retry:
+                            self.on_retry(self.name, attempt + 1, delay)
+                            
+                        time.sleep(delay)
+                        continue
                     continue
                 # non-retryable or exhausted retries
                 masked_key = f"...{self.api_key[-4:]}" if hasattr(self, 'api_key') and self.api_key else "unknown"

@@ -111,26 +111,40 @@ def run_debate(question: str, context: str = "", num_agents: int = None,
             "responses": new_round_responses
         })
 
-    # determine final answer from last round via majority
-    final_responses = all_rounds[-1]["responses"]
-    from collections import Counter
-    answers = [
-        resp["response"].get("answer", "").strip().lower()
-        for resp in final_responses
-    ]
-    vote_tally = Counter(answers)
-    winning_answer_lower = vote_tally.most_common(1)[0][0]
-    winning_count = vote_tally.most_common(1)[0][1]
+        # --- PRODUCTION UPGRADE: Semantic Consensus Detection ---
+        if r >= 1: # Only start checking after first debate round
+            consensus_answer, consensus_score = _check_semantic_consensus(new_round_responses)
+            if consensus_score >= config.QUORUM_THRESHOLD:
+                print(f"  [consensus] QUORUM REACHED EARLY in round {r} ({consensus_score:.2f})!")
+                winning_answer = consensus_answer
+                confidence_score = consensus_score
+                quorum_reached = True
+                break
+        # -------------------------------------------------------
 
-    # get original-cased version
-    winning_answer = winning_answer_lower
-    for resp in final_responses:
-        if resp["response"].get("answer", "").strip().lower() == winning_answer_lower:
-            winning_answer = resp["response"]["answer"].strip()
-            break
+    # determine final answer (if not reached early)
+    if not quorum_reached:
+        final_responses = all_rounds[-1]["responses"]
+        from collections import Counter
+        answers = [
+            resp["response"].get("answer", "").strip().lower()
+            for resp in final_responses
+        ]
+        vote_tally = Counter(answers)
+        winning_answer_lower = vote_tally.most_common(1)[0][0]
+        winning_count = vote_tally.most_common(1)[0][1]
 
-    confidence_score = winning_count / len(agents)
-    quorum_reached = confidence_score >= config.QUORUM_THRESHOLD
+        # get original-cased version
+        winning_answer = winning_answer_lower
+        for resp in final_responses:
+            if resp["response"].get("answer", "").strip().lower() == winning_answer_lower:
+                winning_answer = resp["response"]["answer"].strip()
+                break
+
+        confidence_score = winning_count / len(agents)
+        quorum_reached = confidence_score >= config.QUORUM_THRESHOLD
+
+    # ... remaining code ...
 
     print(f"\n{'='*60}")
     print(f"DEBATE RESULTS (after {num_rounds} rounds):")
@@ -151,3 +165,34 @@ def run_debate(question: str, context: str = "", num_agents: int = None,
         "quorum_reached": quorum_reached,
         "position_changes": position_changes,
     }
+
+
+def _check_semantic_consensus(responses: list) -> tuple[str, float]:
+    """
+    Analyzes responses to see if a quorum of agents agree on the same core answer.
+    In a true production environment, this would use a small 'Judge' LLM 
+    or semantic similarity embeddings. Here we use normalized frequency.
+    """
+    from collections import Counter
+    answers = []
+    for r in responses:
+        ans = r["response"].get("answer", "").strip().lower()
+        # strip punctuation for better matching
+        ans = "".join(c for c in ans if c.isalnum() or c.isspace())
+        answers.append(ans)
+    
+    tally = Counter(answers)
+    if not tally:
+        return "", 0.0
+        
+    most_common_ans, count = tally.most_common(1)[0]
+    score = count / len(responses)
+    
+    # find original-case answer
+    original_ans = most_common_ans
+    for r in responses:
+        if r["response"].get("answer", "").strip().lower().replace(".", "") == most_common_ans:
+            original_ans = r["response"]["answer"]
+            break
+            
+    return original_ans, score

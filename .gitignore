@@ -14,3 +14,6 @@ __pycache__/
 # ide
 .vscode/
 .idea/
+
+# skills
+ui_skill.md
