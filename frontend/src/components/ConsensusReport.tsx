@@ -19,7 +19,7 @@ export default function ConsensusReport({ summary, agreement, disagreement, synt
       </div>
       
       <p className="text-white/70 mb-8 leading-relaxed italic">
-        "{summary}"
+        {summary}
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">

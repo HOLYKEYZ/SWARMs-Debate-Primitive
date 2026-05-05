@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Network, Trophy, Activity, Loader2 } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface AgentStat {
   persona: string;
@@ -22,7 +23,7 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/agents")
+    fetch(apiUrl("/api/agents"))
       .then(res => res.json())
       .then(data => {
         setAgents(data);

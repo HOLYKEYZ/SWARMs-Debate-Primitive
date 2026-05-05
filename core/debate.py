@@ -37,7 +37,7 @@ def run_debate(question: str, context: str = "", num_agents: int = None,
     position_changes = []
 
     print(f"\n{'='*60}")
-    print(f"DEBATE MECHANISM — {len(agents)} agents, {num_rounds} rounds")
+    print(f"DEBATE MECHANISM - {len(agents)} agents, {num_rounds} rounds")
     print(f"Question: {question}")
     print(f"{'='*60}")
 
@@ -46,7 +46,7 @@ def run_debate(question: str, context: str = "", num_agents: int = None,
     round_responses = []
     for agent in agents:
         print(f"  [{agent.name}] thinking...")
-        result = agent.generate_response(question=question, context=context)
+        result = agent.generate_response_sync(question=question, context=context)
         round_responses.append({
             "name": agent.name,
             "persona": agent.persona_type,
@@ -75,7 +75,7 @@ def run_debate(question: str, context: str = "", num_agents: int = None,
             ]
 
             print(f"  [{agent.name}] deliberating with {len(peer_opinions)} peer opinions...")
-            result = agent.generate_response(
+            result = agent.generate_response_sync(
                 question=question,
                 context=context,
                 peer_opinions=peer_opinions
@@ -111,16 +111,15 @@ def run_debate(question: str, context: str = "", num_agents: int = None,
             "responses": new_round_responses
         })
 
-        # --- PRODUCTION UPGRADE: Semantic Consensus Detection ---
-        if r >= 1: # Only start checking after first debate round
+        if r >= 1:
             consensus_answer, consensus_score = _check_semantic_consensus(new_round_responses)
             if consensus_score >= config.QUORUM_THRESHOLD:
                 print(f"  [consensus] QUORUM REACHED EARLY in round {r} ({consensus_score:.2f})!")
                 winning_answer = consensus_answer
+                winning_count = round(consensus_score * len(agents))
                 confidence_score = consensus_score
                 quorum_reached = True
                 break
-        # -------------------------------------------------------
 
     # determine final answer (if not reached early)
     if not quorum_reached:

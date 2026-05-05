@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Database, ShieldCheck, ExternalLink, Loader2, Users } from 'lucide-react';
+import { Database, ShieldCheck, ExternalLink, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { apiUrl } from '@/lib/api';
 
 interface SessionRecord {
   session_id: string;
@@ -22,7 +23,7 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/sessions")
+    fetch(apiUrl("/api/sessions"))
       .then(res => res.json())
       .then(data => {
         setSessions(data);

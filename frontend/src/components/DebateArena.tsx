@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AgentCard from './AgentCard';
 import MetaAgentBanner from './MetaAgentBanner';
 import QuorumMeter from './QuorumMeter';
@@ -8,7 +8,8 @@ import ChainReceipt from './ChainReceipt';
 import LivePipeline from './LivePipeline';
 import SessionHistory from './SessionHistory';
 import ConsensusReport from './ConsensusReport';
-import { Send, Loader2, Play, LayoutGrid } from 'lucide-react';
+import { Send, Loader2, Play, Gauge, Users, Radio } from 'lucide-react';
+import { apiUrl } from '@/lib/api';
 
 interface EventData {
   event: string;
@@ -33,6 +34,32 @@ interface ChainReceiptData {
   explorer_url: string;
 }
 
+interface SynthesisReportData {
+  summary: string;
+  agreement: string[];
+  disagreement: string[];
+  synthesis: string;
+}
+
+interface SessionRecord {
+  session_id: string;
+  question: string;
+  status: string;
+  mechanism: string;
+  created_at: string;
+  final_answer?: string;
+}
+
+interface AgentState {
+  persona: string;
+  status: 'idle' | 'thinking' | 'responded';
+  answer?: string;
+  reasoning?: string;
+  confidence?: number;
+  positionChanged?: boolean;
+  retryMessage?: string;
+}
+
 export default function DebateArena() {
   const [question, setQuestion] = useState("");
   const [rounds, setRounds] = useState<number>(3);
@@ -40,56 +67,49 @@ export default function DebateArena() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   
   const [status, setStatus] = useState<string>("idle");
+  const [statusMessage, setStatusMessage] = useState<string>("ready for a new swarm run");
+  const [currentRound, setCurrentRound] = useState<number | null>(null);
   const [messages, setMessages] = useState<EventData[]>([]);
   
-  // State from events
+  // state from events
   const [selectorResult, setSelectorResult] = useState<SelectorResult | null>(null);
   const [quorumResult, setQuorumResult] = useState<QuorumResult | null>(null);
   const [chainReceipt, setChainReceipt] = useState<ChainReceiptData | null>(null);
-  const [synthesisReport, setSynthesisReport] = useState<any | null>(null);
+  const [synthesisReport, setSynthesisReport] = useState<SynthesisReportData | null>(null);
   
-  // Agents State
-  const [agents, setAgents] = useState<{
-      [name: string]: {
-          persona: string;
-          status: 'idle' | 'thinking' | 'responded';
-          answer?: string;
-          reasoning?: string;
-          confidence?: number;
-          positionChanged?: boolean;
-          retryMessage?: string;
-      }
-  }>({});
+  // agents state
+  const [agents, setAgents] = useState<Record<string, AgentState>>({});
 
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<SessionRecord[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const eventSourceRef = useRef<EventSource | null>(null);
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(apiUrl("/api/sessions"));
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    }
+  }, []);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory();
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
     };
-  }, []);
-
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch("http://localhost:8000/api/sessions");
-      const data = await res.json();
-      setHistory(data);
-    } catch (err) {
-      console.error("Failed to fetch history", err);
-    }
-  };
+  }, [fetchHistory]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim() || status === "running") return;
 
-    // Reset state
+    // reset state
     setSelectorResult(null);
     setQuorumResult(null);
     setChainReceipt(null);
@@ -97,9 +117,15 @@ export default function DebateArena() {
     setMessages([]);
     setAgents({});
     setStatus("submitting");
+    setStatusMessage("creating session...");
+    setCurrentRound(null);
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
 
     try {
-      const res = await fetch("http://localhost:8000/api/session", {
+      const res = await fetch(apiUrl("/api/session"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -118,49 +144,92 @@ export default function DebateArena() {
 
   const connectSSE = (id: string) => {
     setStatus("running");
-    const es = new EventSource(`http://localhost:8000/api/session/${id}/stream`);
+    setActiveSessionId(id);
+    const es = new EventSource(apiUrl(`/api/session/${id}/stream`));
     eventSourceRef.current = es;
 
-    es.onmessage = (event) => {
+    const consumeEvent = (eventType: string, rawData: string) => {
       try {
-        const payload = JSON.parse(event.data);
+        const payload = JSON.parse(rawData);
         
-        if (payload.event === "heartbeat") return;
+        if (eventType === "heartbeat") return;
 
-        setMessages((prev) => [...prev, payload]);
+        const normalizedPayload = {
+          event: payload.event ?? eventType,
+          data: payload.data ?? payload,
+          timestamp: payload.timestamp ?? new Date().toISOString(),
+        };
         
-        handleEvent(payload.event, payload.data);
+        setMessages((prev) => [...prev, normalizedPayload]);
+        handleEvent(normalizedPayload.event, normalizedPayload.data);
 
-        if (payload.event === "session_complete" || payload.event === "error") {
+        if (normalizedPayload.event === "session_complete" || normalizedPayload.event === "error") {
           es.close();
-          setStatus(payload.event === "error" ? "failed" : "complete");
-          fetchHistory(); // Refresh history
+          setStatus(normalizedPayload.event === "error" ? "failed" : "complete");
+          fetchHistory();
         }
       } catch (e) {
         console.error("Error parsing SSE data", e);
       }
     };
 
+    const eventTypes = [
+      "status",
+      "selector_decision",
+      "debate_start",
+      "vote_start",
+      "round_start",
+      "agent_thinking",
+      "agent_response",
+      "agent_retry",
+      "round_complete",
+      "quorum_result",
+      "synthesis_report",
+      "transcript_hashed",
+      "chain_receipt",
+      "chain_error",
+      "session_complete",
+      "error",
+      "heartbeat",
+    ];
+
+    eventTypes.forEach((eventType) => {
+      es.addEventListener(eventType, (event) => consumeEvent(eventType, event.data));
+    });
+
+    es.onmessage = (event) => consumeEvent("message", event.data);
+
     es.onerror = () => {
       console.log("SSE Connection closed or error");
       es.close();
-      if (status === "running") {
-         setStatus("complete");
-      }
+      setStatus((currentStatus) => currentStatus === "running" ? "complete" : currentStatus);
     };
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleEvent = (eventType: string, data: Record<string, unknown> | any) => {
+  const handleEvent = (eventType: string, data: Record<string, unknown>) => {
+    const agentName = typeof data.agent === "string" ? data.agent : null;
+
     if (eventType === "selector_decision") {
-      setSelectorResult(data);
+      setSelectorResult({
+        mechanism: typeof data.mechanism === "string" ? data.mechanism : undefined,
+        reasoning: typeof data.reasoning === "string" ? data.reasoning : undefined,
+        confidence: typeof data.confidence === "number" ? data.confidence : undefined,
+        source: typeof data.source === "string" ? data.source : undefined,
+      });
+    }
+
+    if (eventType === "status" && typeof data.status === "string") {
+      setStatus(data.status);
+      setStatusMessage(typeof data.message === "string" ? data.message : data.status);
+    }
+
+    if (eventType === "round_start" && typeof data.round === "number") {
+      setCurrentRound(data.round);
     }
     
     if (eventType === "debate_start" || eventType === "vote_start") {
-       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-       const initialAgents: Record<string, any> = {};
-       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-       (data.agents as any[]).forEach((a: any) => {
+       const initialAgents: Record<string, AgentState> = {};
+       (data.agents as Array<{ name: string; persona: string }>).forEach((a) => {
            initialAgents[a.name] = {
                persona: a.persona,
                status: 'idle'
@@ -169,56 +238,66 @@ export default function DebateArena() {
        setAgents(initialAgents);
     }
 
-    if (eventType === "agent_thinking") {
+    if (eventType === "agent_thinking" && agentName) {
        setAgents(prev => ({
            ...prev,
-           [data.agent]: { ...prev[data.agent], status: 'thinking', positionChanged: false }
+           [agentName]: { ...prev[agentName], status: 'thinking', positionChanged: false }
        }));
     }
 
-    if (eventType === "agent_response") {
+    if (eventType === "agent_response" && agentName) {
        setAgents(prev => ({
            ...prev,
-           [data.agent]: { 
-               ...prev[data.agent], 
+           [agentName]: { 
+               ...prev[agentName], 
                status: 'responded',
-               answer: data.answer,
-               reasoning: data.reasoning,
-               confidence: data.confidence,
-               positionChanged: data.positionChanged,
+               answer: typeof data.answer === "string" ? data.answer : undefined,
+               reasoning: typeof data.reasoning === "string" ? data.reasoning : undefined,
+               confidence: typeof data.confidence === "number" ? data.confidence : undefined,
+               positionChanged: Boolean(data.position_changed),
                retryMessage: undefined
            }
        }));
     }
 
-    if (eventType === "agent_retry") {
+    if (eventType === "agent_retry" && agentName) {
        setAgents(prev => ({
            ...prev,
-           [data.agent]: { 
-               ...prev[data.agent], 
+           [agentName]: { 
+               ...prev[agentName], 
                status: 'thinking',
-               retryMessage: data.message
+               retryMessage: typeof data.message === "string" ? data.message : undefined
            }
        }));
     }
 
     if (eventType === "quorum_result") {
-       setQuorumResult(data);
+       setQuorumResult({
+         ...data,
+         confidence_score: typeof data.confidence_score === "number" ? data.confidence_score : 0,
+       });
     }
 
     if (eventType === "chain_receipt") {
-       setChainReceipt(data);
+       if (typeof data.signature === "string" && typeof data.explorer_url === "string") {
+         setChainReceipt({ signature: data.signature, explorer_url: data.explorer_url });
+       }
     }
 
     if (eventType === "synthesis_report") {
-       setSynthesisReport(data);
+       setSynthesisReport({
+         summary: typeof data.summary === "string" ? data.summary : "",
+         agreement: Array.isArray(data.agreement) ? data.agreement.filter((item): item is string => typeof item === "string") : [],
+         disagreement: Array.isArray(data.disagreement) ? data.disagreement.filter((item): item is string => typeof item === "string") : [],
+         synthesis: typeof data.synthesis === "string" ? data.synthesis : "",
+       });
     }
   };
 
   const isIdle = status === "idle";
-  const isRunning = status === "running" || status === "submitting";
+  const isRunning = ["submitting", "selecting", "running", "synthesizing", "hashing", "chain"].includes(status);
 
-  // Pre-fill agent layout if no agents are running yet to show empty boxes
+  // pre-fill agent layout if no agents are running yet to show empty boxes
   const renderedAgents = Object.keys(agents).length > 0 
     ? Object.entries(agents).map(([name, state]) => ({ name, ...state }))
     : [
@@ -227,9 +306,10 @@ export default function DebateArena() {
         { name: "Agent_3_Advocate", persona: "Advocate", status: 'idle' as const },
         { name: "Agent_4_Skeptic", persona: "Skeptic", status: 'idle' as const },
       ];
+  const transcriptHash = messages.find((m) => m.event === 'transcript_hashed')?.data.hash;
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-12 pb-20 items-start pt-32 px-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-10 pb-20 items-start px-6">
       
       {/* Left Sidebar: History */}
       <div className="hidden lg:block sticky top-32">
@@ -247,15 +327,36 @@ export default function DebateArena() {
         <div className="flex flex-col gap-6">
            <div className="flex justify-between items-end">
               <div>
-                <h1 className="text-4xl font-black tracking-tighter text-white mb-2">Arena</h1>
-                <p className="text-sm text-white/30 font-medium">Provable multi-agent deliberation</p>
+                <h1 className="text-4xl font-black tracking-tight text-white mb-2">Deliberation Console</h1>
+                <p className="text-sm text-white/40 font-medium">{statusMessage}</p>
               </div>
               {isRunning && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Live</span>
                 </div>
               )}
+           </div>
+
+           <div className="grid grid-cols-3 gap-3">
+             <div className="glass-panel rounded-lg p-4">
+               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
+                 <Radio className="w-3 h-3 text-blue-400" /> status
+               </div>
+               <div className="text-sm font-bold text-white capitalize">{status}</div>
+             </div>
+             <div className="glass-panel rounded-lg p-4">
+               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
+                 <Users className="w-3 h-3 text-emerald-400" /> agents
+               </div>
+               <div className="text-sm font-bold text-white">{renderedAgents.length} online</div>
+             </div>
+             <div className="glass-panel rounded-lg p-4">
+               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
+                 <Gauge className="w-3 h-3 text-amber-400" /> round
+               </div>
+               <div className="text-sm font-bold text-white">{currentRound === null ? "standby" : `round ${currentRound}`}</div>
+             </div>
            </div>
            
            {(status !== 'idle' || activeSessionId) && (
@@ -266,7 +367,7 @@ export default function DebateArena() {
         </div>
 
         {/* Input Section */}
-      <div className="glass-panel p-6 rounded-2xl border-white/10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="glass-panel p-6 rounded-lg border-white/10 animate-in fade-in slide-in-from-top-4 duration-700">
         <h2 className="text-sm font-bold tracking-widest uppercase text-white/50 mb-4 flex items-center gap-2">
             <Play className="w-4 h-4" /> Start Deliberation
         </h2>
@@ -278,13 +379,13 @@ export default function DebateArena() {
               disabled={isRunning}
               rows={question.includes('\n') ? Math.min(question.split('\n').length, 10) : 1}
               placeholder="e.g. Should we deploy this smart contract to mainnet?"
-              className="flex-1 bg-black/40 border border-white/10 rounded-xl px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-none font-sans leading-relaxed"
+              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-none font-sans leading-relaxed"
             />
             <div className="flex justify-end">
               <button 
                 type="submit" 
                 disabled={isRunning || !question.trim()}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white px-10 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all min-w-[160px]"
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white px-10 py-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all min-w-[160px]"
               >
                 {isRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 {isRunning ? 'Processing...' : 'Submit'}
@@ -344,7 +445,7 @@ export default function DebateArena() {
             <div className="flex gap-2 mt-4">
                <button 
                  type="button"
-                 onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // No owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}
+                 onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // no owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}
                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition-colors"
                >
                  Try Demo: Smart Contract Audit
@@ -405,7 +506,7 @@ export default function DebateArena() {
              {chainReceipt && (
                 <ChainReceipt 
                   signature={chainReceipt.signature}
-                  hash={messages.find(m => m.event === 'transcript_hashed')?.data.hash || ''}
+                  hash={typeof transcriptHash === "string" ? transcriptHash : ''}
                   explorerUrl={chainReceipt.explorer_url}
                 />
              )}

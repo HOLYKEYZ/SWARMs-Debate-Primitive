@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import asyncio
 from google import genai
 from google.genai import types
 import config
@@ -18,7 +19,7 @@ class Agent:
         "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing. You should remain cautious until at least round 2."
     }
 
-    def __init__(self, name: str, persona_type: str, api_keys: list[str] = None, on_retry: callable = None):
+    def __init__(self, name: str, persona_type: str, api_keys: list[str] = None, api_key: str = None, on_retry: callable = None):
         if persona_type not in self.PERSONAS:
             raise ValueError(f"Unknown persona type: {persona_type}")
         self.name = name
@@ -26,8 +27,7 @@ class Agent:
         self.system_prompt = self.PERSONAS[persona_type]
         self.on_retry = on_retry
         
-        # Use provided keys, or fallback to config
-        self.api_keys = api_keys if api_keys else config.GEMINI_API_KEYS
+        self.api_keys = api_keys or ([api_key] if api_key else config.GEMINI_API_KEYS)
         self.current_key_index = 0
         self._init_client()
 
@@ -50,8 +50,6 @@ class Agent:
 
         if peer_opinions and len(peer_opinions) > 0:
             user_content += "Here are the most recent perspectives from the swarm:\n"
-            # PRODUCTION UPGRADE: Only show the most recent opinions to prevent context flooding
-            # We keep only the last N opinions if the list is huge
             recent_opinions = peer_opinions[-6:] 
             for op in recent_opinions:
                 user_content += f"--- {op['name']} ({op['persona']}) ---\n"
@@ -86,7 +84,7 @@ class Agent:
             "reasoning": "Failed to parse json from model response."
         }
 
-    def generate_response(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
+    async def generate_response(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
         """
         generate a structured response given the question, context, and peer opinions.
         includes retry logic with exponential backoff for rate limits.
@@ -96,29 +94,30 @@ class Agent:
 
         for attempt in range(MAX_RETRIES):
             try:
-                response = self.client.models.generate_content(
-                    model=config.MODEL,
-                    contents=user_content,
-                    config=types.GenerateContentConfig(
-                        system_instruction=self.system_prompt,
-                        temperature=0.7,
+                response = await asyncio.wait_for(
+                    self.client.aio.models.generate_content(
+                        model=config.MODEL,
+                        contents=user_content,
+                        config=types.GenerateContentConfig(
+                            system_instruction=self.system_prompt,
+                            temperature=0.7,
+                        ),
                     ),
+                    timeout=20.0
                 )
                 return self._parse_response(response.text)
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str or "quota" in error_str
+                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str or "quota" in error_str or "timeout" in error_str
+
                 if is_retryable:
-                    # PRODUCTION UPGRADE: Instant Failover
-                    # Try rotating keys before sleeping
                     if attempt < len(self.api_keys):
                         self._rotate_key()
                         if self.on_retry:
-                            self.on_retry(self.name, attempt + 1, 0) # 0 delay for failover
+                            self.on_retry(self.name, attempt + 1, 0)
                         continue 
                     
-                    # If we've tried all keys, then sleep
                     if attempt < MAX_RETRIES - 1:
                         delay = BASE_RETRY_DELAY * (2 ** (attempt - len(self.api_keys) + 1))
                         print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{MAX_RETRIES})...")
@@ -126,13 +125,17 @@ class Agent:
                         if self.on_retry:
                             self.on_retry(self.name, attempt + 1, delay)
                             
-                        time.sleep(delay)
+                        await asyncio.sleep(delay)
                         continue
-                    continue
+                    
                 # non-retryable or exhausted retries
-                masked_key = f"...{self.api_key[-4:]}" if hasattr(self, 'api_key') and self.api_key else "unknown"
+                masked_key = f"...{self.api_keys[self.current_key_index % len(self.api_keys)][-4:]}"
                 return {
                     "answer": "API Error",
                     "confidence": 0.0,
                     "reasoning": f"Failed using key {masked_key}. Error details: {str(e)}"
                 }
+
+    def generate_response_sync(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
+        """run the async generator from synchronous cli code."""
+        return asyncio.run(self.generate_response(question, context, peer_opinions))

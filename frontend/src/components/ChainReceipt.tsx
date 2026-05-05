@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Copy, Database, Network } from 'lucide-react';
+import { ShieldCheck, Copy, Database, Network, ArrowUpRight } from 'lucide-react';
 
 interface ChainReceiptProps {
   signature: string;
@@ -16,7 +16,6 @@ export default function ChainReceipt({ signature, hash, explorerUrl }: ChainRece
   return (
     <div className="glass-panel p-8 rounded-2xl animate-in zoom-in-95 duration-700 w-full max-w-4xl mx-auto border border-green-500/30 bg-green-500/5 relative overflow-hidden">
       
-      {/* Background glow */}
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/20 rounded-full blur-3xl" />
       
       <div className="flex items-center gap-4 mb-8">
@@ -70,13 +69,5 @@ export default function ChainReceipt({ signature, hash, explorerUrl }: ChainRece
         </a>
       </div>
     </div>
-  );
-}
-
-function ArrowUpRight({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 17l9.2-9.2M17 17V7H7" />
-    </svg>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Circle, Loader2, Sparkles, Binary, Link as LinkIcon, Database } from 'lucide-react';
+import { CheckCircle2, Loader2, Sparkles, Binary, Link as LinkIcon, Database } from 'lucide-react';
 
 interface LivePipelineProps {
   currentStatus: string;
@@ -14,7 +14,7 @@ const steps = [
 ];
 
 export default function LivePipeline({ currentStatus }: LivePipelineProps) {
-  // Map internal status to step index
+  // map internal status to step index
   const getStepIndex = (status: string) => {
     if (status === 'selecting') return 0;
     if (status === 'running') return 1;

@@ -70,7 +70,7 @@ export default function QuorumMeter({ confidence, threshold = 0.75 }: QuorumMete
           ? "bg-green-500/20 text-green-400 border-green-500/30 shadow-[0_0_15px_rgba(74,222,128,0.3)]" 
           : "bg-white/5 text-white/50 border-white/10"
       )}>
-        {isReached ? 'Status: OVERRIDDEN' : 'Status: DELIBERATING...'}
+        {isReached ? 'Status: Quorum Reached' : 'Status: No Quorum'}
       </div>
     </div>
   );

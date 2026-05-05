@@ -197,23 +197,7 @@ class SessionManager:
                 "confidence_score": session_data.get("confidence_score", 0),
             })
 
-            # step 4: transcript hashing
-            if quorum:
-                session.status = "hashing"
-                session.emit("status", {"status": "hashing", "message": "Hashing transcript..."})
-
-                transcript_data = create_transcript(
-                    session.mechanism,
-                    selector_result["reasoning"],
-                    session_data
-                )
-                session.transcript_data = transcript_data
-                session.emit("transcript_hashed", {
-                    "hash": transcript_data["hash"],
-                    "session_id": transcript_data["session_id"],
-                })
-            else:
-                # PRODUCTION UPGRADE: Synthesis for non-quorum debates
+            if not quorum and session.mechanism == "debate":
                 session.status = "synthesizing"
                 session.emit("status", {"status": "synthesizing", "message": "No quorum. Synthesizing compromise report..."})
                 
@@ -224,7 +208,21 @@ class SessionManager:
                 session.session_data["synthesis_report"] = synthesis
                 session.emit("synthesis_report", synthesis)
 
-                # step 5: on-chain logging
+            session.status = "hashing"
+            session.emit("status", {"status": "hashing", "message": "Hashing transcript..."})
+
+            transcript_data = create_transcript(
+                session.mechanism,
+                selector_result["reasoning"],
+                session.session_data
+            )
+            session.transcript_data = transcript_data
+            session.emit("transcript_hashed", {
+                "hash": transcript_data["hash"],
+                "session_id": transcript_data["session_id"],
+            })
+
+            if quorum:
                 session.status = "chain"
                 session.emit("status", {"status": "chain", "message": "Writing to Solana Devnet..."})
 
@@ -237,7 +235,6 @@ class SessionManager:
                     )
                     session.chain_signature = signature
 
-                    # verify
                     verification = await asyncio.to_thread(client.verify_on_chain, signature)
                     session.chain_verified = verification.get("verified", False)
 
@@ -247,7 +244,6 @@ class SessionManager:
                         "explorer_url": f"https://explorer.solana.com/tx/{signature}?cluster=devnet",
                     })
                     
-                    # Log reputation for all agents in the background
                     final_round = getattr(session_data, "get", lambda x: None)("rounds", [])
                     if final_round:
                         for resp in final_round[-1].get("responses", []):
@@ -294,7 +290,7 @@ class SessionManager:
         round_responses = []
         for agent in agents:
             session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = await asyncio.to_thread(agent.generate_response, question)
+            result = await agent.generate_response(question)
             round_responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,
@@ -308,7 +304,7 @@ class SessionManager:
                 "confidence": result.get("confidence", 0),
                 "reasoning": result.get("reasoning", ""),
             })
-            # PRODUCTION UPGRADE: Sequential throttle to prevent project-level 429s
+            # sequential throttle to prevent project-level 429s
             await asyncio.sleep(2) 
         
         all_rounds.append({"round": 0, "responses": round_responses})
@@ -330,9 +326,7 @@ class SessionManager:
                     "round": r, "peers": len(peer_opinions)
                 })
 
-                result = await asyncio.to_thread(
-                    agent.generate_response, question, "", peer_opinions
-                )
+                result = await agent.generate_response(question, "", peer_opinions)
                 new_round_responses.append({
                     "name": agent.name,
                     "persona": agent.persona_type,
@@ -409,7 +403,7 @@ class SessionManager:
 
         for agent in agents:
             session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = await asyncio.to_thread(agent.generate_response, question)
+            result = await agent.generate_response(question)
             responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,

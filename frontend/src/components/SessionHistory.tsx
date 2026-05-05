@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Clock, CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
+import { History, ChevronRight } from 'lucide-react';
 
 interface Session {
   session_id: string;

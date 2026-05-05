@@ -49,7 +49,7 @@ def run_vote(question: str, context: str = "", num_agents: int = None) -> dict:
 
     for agent in agents:
         print(f"  [{agent.name}] voting...")
-        result = agent.generate_response(question=question, context=context)
+        result = agent.generate_response_sync(question=question, context=context)
         responses.append({
             "name": agent.name,
             "persona": agent.persona_type,

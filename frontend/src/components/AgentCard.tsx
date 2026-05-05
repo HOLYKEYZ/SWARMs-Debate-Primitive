@@ -1,7 +1,7 @@
 import React from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Brain, User, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Brain, User, RefreshCw } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -44,7 +44,7 @@ export default function AgentCard({
     <div className={cn(
       "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col h-full",
       isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-70 scale-100",
-      colorClass.split(' ')[2] // apply background tint
+      colorClass.split(' ')[2]
     )}>
       
       {/* Position Change Indicator */}

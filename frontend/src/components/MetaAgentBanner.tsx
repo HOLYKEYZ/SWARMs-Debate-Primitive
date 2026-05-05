@@ -1,7 +1,7 @@
 import React from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Shield, BrainCircuit, Vote } from 'lucide-react';
+import { BrainCircuit, Vote } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -43,6 +43,9 @@ export default function MetaAgentBanner({ mechanism, reasoning, confidence, sour
          )}>
              {mechanism}
          </div>
+         {typeof confidence === "number" && (
+           <div className="text-[10px] text-white/30 font-bold mt-1">{Math.round(confidence * 100)}% confidence</div>
+         )}
       </div>
     </div>
   );
