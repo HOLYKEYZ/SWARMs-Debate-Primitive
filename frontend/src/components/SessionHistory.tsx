@@ -31,7 +31,7 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
         </div>
       </div>
       
-      <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-3 custom-scrollbar">
+      <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-3 custom-scrollbar">
         {sessions.length === 0 && (
           <div className="p-10 border border-dashed border-white/5 rounded-3xl text-center flex flex-col items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">

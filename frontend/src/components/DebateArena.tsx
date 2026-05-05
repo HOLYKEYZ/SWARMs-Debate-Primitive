@@ -250,7 +250,7 @@ export default function DebateArena() {
                 <h1 className="text-4xl font-black tracking-tighter text-white mb-2">Arena</h1>
                 <p className="text-sm text-white/30 font-medium">Provable multi-agent deliberation</p>
               </div>
-              {sessionActive && (
+              {isRunning && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Live</span>
@@ -361,28 +361,37 @@ export default function DebateArena() {
         </form>
       </div>
 
+      {/* Agents Arena - MOVED UP FOR BETTER VISIBILITY DURING DELIBERATION */}
+      {(isRunning || !isIdle) && (
+        <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex items-center gap-4">
+             <div className="h-px flex-1 bg-white/5" />
+             <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 whitespace-nowrap">Swarm Deliberation</h2>
+             <div className="h-px flex-1 bg-white/5" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {renderedAgents.map((agent) => (
+              <AgentCard 
+                key={agent.name}
+                name={agent.name}
+                persona={agent.persona}
+                status={agent.status}
+                answer={agent.answer}
+                reasoning={agent.reasoning}
+                confidence={agent.confidence}
+                isActive={agent.status === 'thinking'}
+                positionChanged={agent.positionChanged}
+                retryMessage={agent.retryMessage}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Meta-Agent Selector Banner */}
       {selectorResult && (
         <MetaAgentBanner {...selectorResult} />
       )}
-
-      {/* Agents Arena */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {renderedAgents.map((agent) => (
-          <AgentCard 
-            key={agent.name}
-            name={agent.name}
-            persona={agent.persona}
-            status={agent.status}
-            answer={agent.answer}
-            reasoning={agent.reasoning}
-            confidence={agent.confidence}
-            isActive={agent.status === 'thinking'}
-            positionChanged={agent.positionChanged}
-            retryMessage={agent.retryMessage}
-          />
-        ))}
-      </div>
 
         {/* Quorum / Receipt Section */}
         {(quorumResult || synthesisReport) && (
