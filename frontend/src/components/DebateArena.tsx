@@ -26,6 +26,8 @@ interface SelectorResult {
 
 interface QuorumResult {
   confidence_score: number;
+  final_answer?: string;
+  quorum_reached?: boolean;
   [key: string]: unknown;
 }
 
@@ -275,6 +277,8 @@ export default function DebateArena() {
        setQuorumResult({
          ...data,
          confidence_score: typeof data.confidence_score === "number" ? data.confidence_score : 0,
+         final_answer: typeof data.final_answer === "string" ? data.final_answer : undefined,
+         quorum_reached: typeof data.quorum_reached === "boolean" ? data.quorum_reached : undefined,
        });
     }
 
@@ -498,6 +502,17 @@ export default function DebateArena() {
         {(quorumResult || synthesisReport) && (
           <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
              {quorumResult && <QuorumMeter confidence={quorumResult.confidence_score} />}
+
+             {quorumResult?.final_answer && (
+               <div className="glass-panel rounded-lg p-5 border-white/10">
+                 <div className="text-[10px] uppercase tracking-widest text-white/35 font-black mb-2">
+                   final result
+                 </div>
+                 <p className="text-base font-semibold leading-relaxed text-white">
+                   {quorumResult.final_answer}
+                 </p>
+               </div>
+             )}
              
              {synthesisReport && (
                <ConsensusReport {...synthesisReport} />

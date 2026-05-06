@@ -14,12 +14,12 @@ def create_agents(num_agents: int = None) -> list:
 
     persona_types = list(Agent.PERSONAS.keys())
     agents = []
-    num_keys = len(config.GEMINI_API_KEYS)
+    num_keys = len(config.NVIDIA_API_KEYS)
 
     for i in range(num_agents):
         persona = persona_types[i % len(persona_types)]
         name = f"Agent_{i+1}_{persona}"
-        assigned_key = config.GEMINI_API_KEYS[i % num_keys]
+        assigned_key = config.NVIDIA_API_KEYS[i % num_keys]
         agents.append(Agent(name=name, persona_type=persona, api_key=assigned_key))
     return agents
 

@@ -1,10 +1,7 @@
-import os
 import json
-import time
 import asyncio
-from google import genai
-from google.genai import types
 import config
+from core.llm_client import LLMClient
 
 # max retries for api calls
 MAX_RETRIES = 5
@@ -27,14 +24,15 @@ class Agent:
         self.system_prompt = self.PERSONAS[persona_type]
         self.on_retry = on_retry
         
-        self.api_keys = api_keys or ([api_key] if api_key else config.GEMINI_API_KEYS)
+        self.api_keys = api_keys or ([api_key] if api_key else config.NVIDIA_API_KEYS)
+        self.llm = LLMClient(api_keys=self.api_keys)
         self.current_key_index = 0
         self._init_client()
 
     def _init_client(self):
-        """initialize the genai client with the current key."""
-        key = self.api_keys[self.current_key_index % len(self.api_keys)]
-        self.client = genai.Client(api_key=key)
+        """select the current key and model."""
+        self.api_key = self.api_keys[self.current_key_index % len(self.api_keys)]
+        self.model = self.llm.model_for_index(self.current_key_index)
 
     def _rotate_key(self):
         """switch to the next available key in the pool."""
@@ -84,6 +82,19 @@ class Agent:
             "reasoning": "Failed to parse json from model response."
         }
 
+    def _format_api_error(self, error: Exception) -> str:
+        """produce a concise user-facing error from verbose provider payloads."""
+        error_text = str(error)
+        lower_error = error_text.lower()
+
+        if "429" in error_text or "resource_exhausted" in lower_error or "quota" in lower_error:
+            return "NVIDIA API quota or rate limit was exhausted for the configured key pool. Deliberation could not complete until quota resets or fresh keys are provided."
+
+        if "not_found" in lower_error or "404" in error_text:
+            return f"NVIDIA model '{self.model}' is not available for the configured API key."
+
+        return error_text[:500]
+
     async def generate_response(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
         """
         generate a structured response given the question, context, and peer opinions.
@@ -95,13 +106,12 @@ class Agent:
         for attempt in range(MAX_RETRIES):
             try:
                 response = await asyncio.wait_for(
-                    self.client.aio.models.generate_content(
-                        model=config.MODEL,
-                        contents=user_content,
-                        config=types.GenerateContentConfig(
-                            system_instruction=self.system_prompt,
-                            temperature=0.7,
-                        ),
+                    self.llm.generate(
+                        api_key=self.api_key,
+                        model=self.model,
+                        system_prompt=self.system_prompt,
+                        user_prompt=user_content,
+                        temperature=0.7,
                     ),
                     timeout=20.0
                 )
@@ -133,7 +143,7 @@ class Agent:
                 return {
                     "answer": "API Error",
                     "confidence": 0.0,
-                    "reasoning": f"Failed using key {masked_key}. Error details: {str(e)}"
+                    "reasoning": f"Failed using key {masked_key}. {self._format_api_error(e)}"
                 }
 
     def generate_response_sync(self, question: str, context: str = "", peer_opinions: list = None) -> dict:

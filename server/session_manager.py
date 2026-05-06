@@ -14,6 +14,52 @@ from server.database import SessionLocal, SessionModel, init_db
 import config
 
 
+def _is_valid_agent_response(response: dict) -> bool:
+    """return false for transport/model failures that should not count as consensus."""
+    answer = str(response.get("answer", "")).strip().lower()
+    confidence = float(response.get("confidence", 0) or 0)
+    return bool(answer) and answer not in {"api error", "error parsing output"} and confidence > 0
+
+
+def _finalize_tally(responses: list[dict], agent_count: int, quorum_threshold: float, answer_key: str) -> dict:
+    valid_responses = [
+        resp for resp in responses
+        if _is_valid_agent_response(resp.get("response", {}))
+    ]
+
+    if not valid_responses:
+        return {
+            answer_key: "No valid agent responses. API quota or model access prevented deliberation.",
+            "confidence_score": 0.0,
+            "quorum_reached": False,
+            "vote_tally": {},
+            "valid_response_count": 0,
+            "failed_response_count": len(responses),
+        }
+
+    answers = [resp["response"].get("answer", "").strip().lower() for resp in valid_responses]
+    vote_tally = dict(Counter(answers))
+    winning_answer_lower = max(vote_tally, key=vote_tally.get)
+    winning_count = vote_tally[winning_answer_lower]
+
+    winning_answer = winning_answer_lower
+    for resp in valid_responses:
+        if resp["response"].get("answer", "").strip().lower() == winning_answer_lower:
+            winning_answer = resp["response"]["answer"].strip()
+            break
+
+    confidence_score = winning_count / agent_count
+
+    return {
+        answer_key: winning_answer,
+        "confidence_score": confidence_score,
+        "quorum_reached": confidence_score >= quorum_threshold,
+        "vote_tally": vote_tally,
+        "valid_response_count": len(valid_responses),
+        "failed_response_count": len(responses) - len(valid_responses),
+    }
+
+
 class SessionEvent:
     """a single event emitted during a session for sse streaming."""
     def __init__(self, event_type: str, data: dict):
@@ -197,7 +243,8 @@ class SessionManager:
                 "confidence_score": session_data.get("confidence_score", 0),
             })
 
-            if not quorum and session.mechanism == "debate":
+            valid_response_count = session_data.get("valid_response_count", 0)
+            if not quorum and session.mechanism == "debate" and valid_response_count > 0:
                 session.status = "synthesizing"
                 session.emit("status", {"status": "synthesizing", "message": "No quorum. Synthesizing compromise report..."})
                 
@@ -365,31 +412,26 @@ class SessionManager:
             all_rounds.append({"round": r, "responses": new_round_responses})
             session.emit("round_complete", {"round": r})
 
-        # determine final answer from last round via majority
         final_responses = all_rounds[-1]["responses"]
-        answers = [resp["response"].get("answer", "").strip().lower() for resp in final_responses]
-        vote_tally = Counter(answers)
-        winning_answer_lower = vote_tally.most_common(1)[0][0]
-        winning_count = vote_tally.most_common(1)[0][1]
-
-        winning_answer = winning_answer_lower
-        for resp in final_responses:
-            if resp["response"].get("answer", "").strip().lower() == winning_answer_lower:
-                winning_answer = resp["response"]["answer"].strip()
-                break
-
-        confidence_score = winning_count / len(agents)
-        quorum_reached = confidence_score >= session.quorum_threshold
+        tally_result = _finalize_tally(
+            final_responses,
+            len(agents),
+            session.quorum_threshold,
+            "final_answer"
+        )
 
         return {
             "mechanism": "debate",
             "question": question,
             "rounds": all_rounds,
-            "final_answer": winning_answer,
-            "confidence_score": confidence_score,
+            "final_answer": tally_result["final_answer"],
+            "confidence_score": tally_result["confidence_score"],
             "agent_count": len(agents),
-            "quorum_reached": quorum_reached,
+            "quorum_reached": tally_result["quorum_reached"],
             "position_changes": position_changes,
+            "vote_tally": tally_result["vote_tally"],
+            "valid_response_count": tally_result["valid_response_count"],
+            "failed_response_count": tally_result["failed_response_count"],
         }
 
     async def _run_vote(self, question: str, session: Session, agents: list[Agent]) -> dict:
@@ -419,35 +461,29 @@ class SessionManager:
             })
             await asyncio.sleep(2)
 
-        # tally
-        answers = [r["response"].get("answer", "").strip().lower() for r in responses]
-        vote_tally = dict(Counter(answers))
-        winning_answer_lower = max(vote_tally, key=vote_tally.get)
-        winning_count = vote_tally[winning_answer_lower]
-
-        winning_answer = winning_answer_lower
-        for r in responses:
-            if r["response"].get("answer", "").strip().lower() == winning_answer_lower:
-                winning_answer = r["response"]["answer"].strip()
-                break
-
-        confidence_score = winning_count / len(agents)
-        quorum_reached = confidence_score >= session.quorum_threshold
+        tally_result = _finalize_tally(
+            responses,
+            len(agents),
+            session.quorum_threshold,
+            "winning_answer"
+        )
 
         return {
             "mechanism": "vote",
             "question": question,
             "responses": responses,
-            "vote_tally": vote_tally,
-            "winning_answer": winning_answer,
-            "confidence_score": confidence_score,
+            "vote_tally": tally_result["vote_tally"],
+            "winning_answer": tally_result["winning_answer"],
+            "confidence_score": tally_result["confidence_score"],
             "agent_count": len(agents),
-            "quorum_reached": quorum_reached,
+            "quorum_reached": tally_result["quorum_reached"],
+            "valid_response_count": tally_result["valid_response_count"],
+            "failed_response_count": tally_result["failed_response_count"],
         }
 
     def _create_agents(self, session: Session) -> list[Agent]:
         """initialize agents for the session with rate-limit tracking."""
-        keys = config.GEMINI_API_KEYS
+        keys = config.NVIDIA_API_KEYS
         personas = list(Agent.PERSONAS.keys())
         
         def on_agent_retry(name, attempt, delay):

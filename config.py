@@ -1,10 +1,37 @@
 import os
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    def load_dotenv(path: str = ".env"):
+        if not os.path.exists(path):
+            return
+        with open(path, "r", encoding="utf-8") as env_file:
+            for raw_line in env_file:
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 # Load environment variables from .env file if it exists
 load_dotenv()
 
-# API Keys (support multiple for rotation/rate limit bypass)
+# api keys (support multiple for rotation/rate limit bypass)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "nvidia").lower()
+
+NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
+NVIDIA_API_KEYS = []
+NVIDIA_MODELS = []
+for i in range(1, 10):
+    key_name = "NVIDIA_API_KEY" if i == 1 else f"NVIDIA_API_KEY{i}"
+    model_name = "NVIDIA_MODEL" if i == 1 else f"NVIDIA_MODEL{i}"
+    key = os.getenv(key_name, "")
+    model = os.getenv(model_name, "")
+    if key:
+        NVIDIA_API_KEYS.append(key)
+        NVIDIA_MODELS.append(model or os.getenv("NVIDIA_MODEL", "moonshotai/kimi-k2-thinking"))
+
 GEMINI_API_KEYS = []
 for i in range(1, 10):
     key_name = "GEMINI_API_KEY" if i == 1 else f"GEMINI_API_KEY{i}"
@@ -23,5 +50,5 @@ WALLET_PATH = "wallet.json"
 # SWARM Coordination configuration
 NUM_AGENTS = 4
 DEBATE_ROUNDS = 3
-MODEL = "gemini-2.0-flash"
+MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 QUORUM_THRESHOLD = 0.75

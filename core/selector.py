@@ -1,8 +1,7 @@
 import json
 import time
-from google import genai
-from google.genai import types
 import config
+from core.llm_client import LLMClient
 
 # fallback keyword lists for when the api is unavailable
 DEBATE_SIGNALS = [
@@ -40,9 +39,8 @@ class MetaAgent:
     )
 
     def __init__(self, api_key: str = None):
-        key = api_key if api_key else config.GEMINI_API_KEYS[0]
-        self.api_key = key
-        self.client = genai.Client(api_key=key)
+        self.api_key = api_key if api_key else config.NVIDIA_API_KEYS[0]
+        self.llm = LLMClient(api_keys=config.NVIDIA_API_KEYS)
 
     def analyze(self, question: str, num_agents: int = None) -> dict:
         """
@@ -74,7 +72,7 @@ class MetaAgent:
             return res
 
     def _ai_decide(self, question: str) -> dict:
-        """use gemini to reason about the question and pick a mechanism."""
+        """use the configured llm to reason about the question and pick a mechanism."""
         prompt = (
             f"Analyze this question and decide the optimal deliberation mechanism:\n\n"
             f'Question: "{question}"\n\n'
@@ -84,13 +82,12 @@ class MetaAgent:
         # retry logic for rate limits
         for attempt in range(3):
             try:
-                response = self.client.models.generate_content(
-                    model=config.MODEL,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=self.SYSTEM_PROMPT,
-                        temperature=0.3,
-                    ),
+                response = self.llm.generate_sync(
+                    api_key=self.api_key,
+                    model=self.llm.model_for_index(0),
+                    system_prompt=self.SYSTEM_PROMPT,
+                    user_prompt=prompt,
+                    temperature=0.3,
                 )
 
                 # parse json from response

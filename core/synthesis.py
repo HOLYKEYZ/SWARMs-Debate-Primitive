@@ -1,7 +1,6 @@
 import json
-from google import genai
-from google.genai import types
 import config
+from core.llm_client import LLMClient
 
 class SynthesisAgent:
     """
@@ -21,8 +20,8 @@ class SynthesisAgent:
     )
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key if api_key else config.GEMINI_API_KEYS[0]
-        self.client = genai.Client(api_key=self.api_key)
+        self.api_key = api_key if api_key else config.NVIDIA_API_KEYS[0]
+        self.llm = LLMClient(api_keys=config.NVIDIA_API_KEYS)
 
     def synthesize(self, question: str, rounds: list) -> dict:
         """Analyze the full debate history and synthesize a final report."""
@@ -37,13 +36,12 @@ class SynthesisAgent:
         prompt = f"Please synthesize this debate history into a final consensus report:\n\n{debate_text}"
 
         try:
-            response = self.client.models.generate_content(
-                model=config.MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.SYSTEM_PROMPT,
-                    temperature=0.4,
-                ),
+            response = self.llm.generate_sync(
+                api_key=self.api_key,
+                model=self.llm.model_for_index(0),
+                system_prompt=self.SYSTEM_PROMPT,
+                user_prompt=prompt,
+                temperature=0.4,
             )
             
             text = response.text
