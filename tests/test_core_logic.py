@@ -75,6 +75,12 @@ class TestLLMClient(unittest.TestCase):
 class TestAgentReputation(unittest.TestCase):
     """Test agent reputation system."""
     
+    @classmethod
+    def setUpClass(cls):
+        """Initialize database before tests."""
+        from server.database import init_db
+        init_db()
+    
     def test_reputation_initialization(self):
         """Test that default agents can be initialized."""
         from server.agent_reputation import init_agent_reputation, get_leaderboard
