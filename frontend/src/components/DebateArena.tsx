@@ -8,6 +8,7 @@ import ChainReceipt from './ChainReceipt';
 import LivePipeline from './LivePipeline';
 import SessionHistory from './SessionHistory';
 import ConsensusReport from './ConsensusReport';
+import DebateGraph from './DebateGraph';
 import { Send, Loader2, Play, Gauge, Users, Radio } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 
@@ -446,7 +447,7 @@ export default function DebateArena() {
           )}
 
           {!isRunning && isIdle && (
-            <div className="flex gap-2 mt-4">
+            <div className="flex flex-wrap gap-2 mt-4">
                <button 
                  type="button"
                  onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // no owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}
@@ -461,6 +462,41 @@ export default function DebateArena() {
                >
                  Try Demo: Simple Math (Vote)
                </button>
+               <button 
+                 type="button"
+                 onClick={() => setQuestion("Should a country implement Universal Basic Income? Consider economic impact, inflation risks, work incentive effects, and social welfare benefits. There are valid arguments on both sides.")}
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-colors"
+               >
+                 Try Demo: UBI Debate (Tie Scenario)
+               </button>
+               <button 
+                 type="button"
+                 onClick={() => setQuestion("Should a messaging app implement client-side scanning for illegal content to protect children, even if it requires analyzing all user messages and could be abused for surveillance?")}
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+               >
+                 Try Demo: Privacy vs Security (Split Decision)
+               </button>
+               <button 
+                 type="button"
+                 onClick={() => setQuestion("DAO GOVERNANCE PROPOSAL:\n\nProposal: Should our DAO allocate 50,000 tokens to fund a new DeFi protocol integration?\n\nArguments FOR:\n- Expands ecosystem utility\n- Potential revenue generation\n- Attracts new users\n\nArguments AGAINST:\n- High risk, unproven protocol\n- Dilutes treasury reserves\n- Better opportunities exist\n\nShould this proposal be approved?")}
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-colors"
+               >
+                 Try Demo: DAO Governance
+               </button>
+               <button 
+                 type="button"
+                 onClick={() => setQuestion("MEDICAL DIAGNOSIS:\n\nPatient presents with persistent headaches, occasional vision changes, and fatigue. MRI shows a 2cm lesion in the frontal lobe.\n\nOptions:\nA. Immediate surgical resection\nB. Biopsy first, then treatment plan\nC. Watchful waiting with regular monitoring\nD. Radiation therapy\n\nConsidering the risks, success rates, and patient quality of life, what is the best course of action?")}
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 border border-pink-500/20 transition-colors"
+               >
+                 Try Demo: Medical Decision
+               </button>
+               <button 
+                 type="button"
+                 onClick={() => setQuestion("INVESTMENT DECISION:\n\nStartup seeking $2M seed round at $10M valuation.\n\nPros:\n- Experienced founding team (ex-Google, ex-Meta)\n- Proprietary AI technology\n- $500K ARR with 200% MoM growth\n- Strong early customer traction\n\nCons:\n- Competitive market with big players\n- High burn rate ($300K/month)\n- Technology not yet patented\n- Dependence on third-party APIs\n\nShould we invest? If yes, at what valuation and terms?")}
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-colors"
+               >
+                 Try Demo: Investment Decision
+               </button>
             </div>
           )}
         </form>
@@ -474,6 +510,10 @@ export default function DebateArena() {
              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 whitespace-nowrap">Swarm Deliberation</h2>
              <div className="h-px flex-1 bg-white/5" />
           </div>
+          
+          {/* Debate Graph Visualization */}
+          <DebateGraph agents={agents} round={currentRound} />
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {renderedAgents.map((agent) => (
               <AgentCard 

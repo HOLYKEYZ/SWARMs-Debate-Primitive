@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Network, Trophy, Activity, Loader2 } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 
 interface AgentStat {
   persona: string;
@@ -49,7 +50,9 @@ export default function AgentsPage() {
          </p>
       </div>
 
-      <div className="w-full max-w-5xl">
+      <div className="w-full max-w-5xl space-y-12">
+        <AnalyticsDashboard />
+        
         {loading ? (
           <div className="flex justify-center py-20">
              <Loader2 className="w-10 h-10 text-white/30 animate-spin" />
