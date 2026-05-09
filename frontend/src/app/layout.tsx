@@ -23,7 +23,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col selection:bg-blue-500/30">
         <ErrorBoundary>
           <SolanaProvider>
-            <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] md:w-[90%] max-w-4xl z-50 pointer-events-none">
+            <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] md:w-[90%] max-w-4xl z-10 pointer-events-none">
               <div className="glass-panel px-4 md:px-8 py-3 flex justify-between items-center pointer-events-auto rounded-2xl border border-white/5 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl">
                  <div className="font-black text-lg md:text-xl tracking-tighter text-white flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
@@ -40,7 +40,7 @@ export default function RootLayout({
                     </div>
                  </div>
               </div>
-            </div>
+            </nav>
             <div className="flex-1 overflow-auto pt-12">
               {children}
             </div>

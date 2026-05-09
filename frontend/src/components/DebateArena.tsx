@@ -315,10 +315,10 @@ export default function DebateArena() {
   const transcriptHash = messages.find((m) => m.event === 'transcript_hashed')?.data.hash;
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 pb-20 items-start px-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 pb-20 items-start px-6 overflow-x-hidden">
       
       {/* Left Sidebar: History */}
-      <div className="hidden xl:block sticky top-32 w-64 flex-shrink-0">
+      <div className="hidden xl:block sticky top-32 w-64 flex-shrink-0 overflow-hidden">
         <SessionHistory 
           sessions={history} 
           onSelect={(id) => {
@@ -328,16 +328,16 @@ export default function DebateArena() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col gap-10 w-full min-w-0">
+      <div className="flex-1 flex flex-col gap-10 w-full min-w-0 overflow-x-hidden">
         {/* Header & Pipeline */}
-        <div className="flex flex-col gap-6">
-           <div className="flex justify-between items-end">
-              <div>
-                <h1 className="text-4xl font-black tracking-tight text-white mb-2">Deliberation Console</h1>
-                <p className="text-sm text-white/40 font-medium">{statusMessage}</p>
+        <div className="flex flex-col gap-6 w-full">
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2 break-words">Deliberation Console</h1>
+                <p className="text-sm text-white/40 font-medium break-words">{statusMessage}</p>
               </div>
               {isRunning && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 flex-shrink-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">Live</span>
                 </div>
@@ -345,23 +345,23 @@ export default function DebateArena() {
            </div>
 
            <div className="grid grid-cols-3 gap-3">
-             <div className="glass-panel rounded-lg p-4">
+             <div className="glass-panel rounded-lg p-4 min-w-0">
                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
                  <Radio className="w-3 h-3 text-blue-400" /> status
                </div>
-               <div className="text-sm font-bold text-white capitalize">{status}</div>
+               <div className="text-sm font-bold text-white capitalize break-words">{status}</div>
              </div>
-             <div className="glass-panel rounded-lg p-4">
+             <div className="glass-panel rounded-lg p-4 min-w-0">
                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
                  <Users className="w-3 h-3 text-emerald-400" /> agents
                </div>
                <div className="text-sm font-bold text-white">{renderedAgents.length} online</div>
              </div>
-             <div className="glass-panel rounded-lg p-4">
+             <div className="glass-panel rounded-lg p-4 min-w-0">
                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
                  <Gauge className="w-3 h-3 text-amber-400" /> round
                </div>
-               <div className="text-sm font-bold text-white">{currentRound === null ? "standby" : `round ${currentRound}`}</div>
+               <div className="text-sm font-bold text-white break-words">{currentRound === null ? "standby" : `round ${currentRound}`}</div>
              </div>
            </div>
            
@@ -373,26 +373,26 @@ export default function DebateArena() {
         </div>
 
         {/* Input Section */}
-      <div className="glass-panel p-6 rounded-lg border-white/10 animate-in fade-in slide-in-from-top-4 duration-700 overflow-hidden">
+      <div className="glass-panel p-6 rounded-lg border-white/10 animate-in fade-in slide-in-from-top-4 duration-700 overflow-hidden w-full">
         <h2 className="text-sm font-bold tracking-widest uppercase text-white/50 mb-4 flex items-center gap-2">
             <Play className="w-4 h-4" /> Start Deliberation
         </h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
+          <div className="flex flex-col gap-4 w-full">
             <textarea 
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               disabled={isRunning}
               rows={4}
               placeholder="e.g. Should we deploy this smart contract to mainnet?"
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-y font-sans leading-relaxed overflow-y-auto"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-y font-sans leading-relaxed overflow-y-auto custom-scrollbar"
               style={{ minHeight: '120px', maxHeight: '400px' }}
             />
-            <div className="flex justify-end">
+            <div className="flex justify-end w-full">
               <button 
                 type="submit" 
                 disabled={isRunning || !question.trim()}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white px-10 py-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all min-w-[160px]"
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 text-white px-6 sm:px-10 py-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all min-w-[160px] flex-shrink-0"
               >
                 {isRunning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 {isRunning ? 'Processing...' : 'Submit'}
@@ -458,53 +458,53 @@ export default function DebateArena() {
           )}
 
           {!isRunning && isIdle && (
-            <div className="flex flex-wrap gap-2 mt-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="flex flex-wrap gap-2 mt-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar w-full">
                <button 
                  type="button"
                  onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // no owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: Smart Contract Audit
                </button>
                <button 
                  type="button"
                  onClick={() => setQuestion("Is 25 x 4 + 10 equal to 110?")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: Simple Math (Vote)
                </button>
                <button 
                  type="button"
                  onClick={() => setQuestion("Should a country implement Universal Basic Income? Consider economic impact, inflation risks, work incentive effects, and social welfare benefits. There are valid arguments on both sides.")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: UBI Debate (Tie Scenario)
                </button>
                <button 
                  type="button"
                  onClick={() => setQuestion("Should a messaging app implement client-side scanning for illegal content to protect children, even if it requires analyzing all user messages and could be abused for surveillance?")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: Privacy vs Security (Split Decision)
                </button>
                <button 
                  type="button"
                  onClick={() => setQuestion("DAO GOVERNANCE PROPOSAL:\n\nProposal: Should our DAO allocate 50,000 tokens to fund a new DeFi protocol integration?\n\nArguments FOR:\n- Expands ecosystem utility\n- Potential revenue generation\n- Attracts new users\n\nArguments AGAINST:\n- High risk, unproven protocol\n- Dilutes treasury reserves\n- Better opportunities exist\n\nShould this proposal be approved?")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: DAO Governance
                </button>
                <button 
                  type="button"
                  onClick={() => setQuestion("MEDICAL DIAGNOSIS:\n\nPatient presents with persistent headaches, occasional vision changes, and fatigue. MRI shows a 2cm lesion in the frontal lobe.\n\nOptions:\nA. Immediate surgical resection\nB. Biopsy first, then treatment plan\nC. Watchful waiting with regular monitoring\nD. Radiation therapy\n\nConsidering the risks, success rates, and patient quality of life, what is the best course of action?")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 border border-pink-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-pink-500/10 text-pink-400 hover:bg-pink-500/20 border border-pink-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: Medical Decision
                </button>
                <button 
                  type="button"
                  onClick={() => setQuestion("INVESTMENT DECISION:\n\nStartup seeking $2M seed round at $10M valuation.\n\nPros:\n- Experienced founding team (ex-Google, ex-Meta)\n- Proprietary AI technology\n- $500K ARR with 200% MoM growth\n- Strong early customer traction\n\nCons:\n- Competitive market with big players\n- High burn rate ($300K/month)\n- Technology not yet patented\n- Dependence on third-party APIs\n\nShould we invest? If yes, at what valuation and terms?")}
-                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-colors"
+                 className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: Investment Decision
                </button>
@@ -525,20 +525,21 @@ export default function DebateArena() {
           {/* Debate Graph Visualization */}
           <DebateGraph agents={agents} round={currentRound} />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {renderedAgents.map((agent) => (
-              <AgentCard 
-                key={agent.name}
-                name={agent.name}
-                persona={showPersonas ? agent.persona : ''}
-                status={agent.status}
-                answer={agent.answer}
-                reasoning={agent.reasoning}
-                confidence={agent.confidence}
-                isActive={agent.status === 'thinking'}
-                positionChanged={agent.positionChanged}
-                retryMessage={agent.retryMessage}
-              />
+              <div key={agent.name} className="min-w-0">
+                <AgentCard 
+                  name={agent.name}
+                  persona={showPersonas ? agent.persona : ''}
+                  status={agent.status}
+                  answer={agent.answer}
+                  reasoning={agent.reasoning}
+                  confidence={agent.confidence}
+                  isActive={agent.status === 'thinking'}
+                  positionChanged={agent.positionChanged}
+                  retryMessage={agent.retryMessage}
+                />
+              </div>
             ))}
           </div>
         </div>
