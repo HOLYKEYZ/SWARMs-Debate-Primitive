@@ -31,7 +31,7 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-3 custom-scrollbar">
+      <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-3 custom-scrollbar relative z-10">
         {sessions.length === 0 && (
           <div className="p-10 border border-dashed border-white/5 rounded-3xl text-center flex flex-col items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
@@ -52,7 +52,7 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
               key={s.session_id}
               onClick={() => onSelect(s.session_id)}
               className={`
-                group relative p-5 rounded-[2rem] border text-left transition-all duration-500 overflow-hidden
+                group relative p-5 rounded-[2rem] border text-left transition-all duration-500 overflow-hidden w-full
                 ${activeId === s.session_id ?
                   'bg-[#0a0a0a] border-blue-500/40 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.2)]' :
                   'bg-[#080808] border-white/[0.03] hover:border-white/10 hover:bg-[#0a0a0a]'}
@@ -73,8 +73,8 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-white/20 min-w-[50px] text-right">
-                     {new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <span className="text-[10px] font-bold text-white/20 min-w-[60px] text-right">
+                     {new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                   </span>
                   {status === 'complete' ? (
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 flex-shrink-0" />

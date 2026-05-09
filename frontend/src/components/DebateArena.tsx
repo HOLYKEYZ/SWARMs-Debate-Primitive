@@ -99,6 +99,39 @@ export default function DebateArena() {
     }
   }, []);
 
+  const loadSession = useCallback(async (sessionId: string) => {
+    try {
+      const res = await fetch(apiUrl(`/api/session/${sessionId}`));
+      const data = await res.json();
+
+      // Load session data into state
+      setSelectorResult(data.selector_result);
+      setQuorumResult({
+        quorum_reached: data.quorum_reached,
+        final_answer: data.final_answer,
+        winning_answer: data.winning_answer,
+      });
+      setChainReceipt(data.chain_signature ? {
+        signature: data.chain_signature,
+        tx_url: `https://explorer.solana.com/tx/${data.chain_signature}?cluster=devnet`,
+        verified: data.chain_verified,
+      } : null);
+      setSynthesisReport(data.synthesis_report);
+      setMessages(data.transcript_data?.rounds?.flatMap((r: any) => r.responses) || []);
+      setAgents({});
+      setStatus(data.status === 'complete' ? 'complete' : 'idle');
+      setStatusMessage(data.status === 'complete' ? 'Session complete' : 'Session loaded');
+      setCurrentRound(null);
+      setActiveSessionId(sessionId);
+
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    } catch (err) {
+      console.error("Failed to load session", err);
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory();
@@ -319,12 +352,12 @@ export default function DebateArena() {
       
       {/* Left Sidebar: History */}
       <div className="hidden xl:block sticky top-32 w-64 flex-shrink-0 overflow-hidden">
-        <SessionHistory 
-          sessions={history} 
+        <SessionHistory
+          sessions={history}
           onSelect={(id) => {
-             setActiveSessionId(id);
-          }} 
-          activeId={activeSessionId || undefined} 
+             loadSession(id);
+          }}
+          activeId={activeSessionId || undefined}
         />
       </div>
 
