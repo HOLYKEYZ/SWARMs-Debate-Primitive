@@ -42,7 +42,7 @@ export default function AgentCard({
   
   return (
     <div className={cn(
-      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col h-full",
+      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col h-full min-h-[200px]",
       isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-70 scale-100",
       colorClass.split(' ')[2]
     )}>
@@ -100,13 +100,15 @@ export default function AgentCard({
             <div className="bg-black/40 rounded-xl p-4 border border-white/5">
               <div className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-2 flex justify-between">
                 <span>Position</span>
-                {confidence && <span className="text-white/60">{(confidence * 100).toFixed(0)}% Conf</span>}
+                {confidence !== undefined && confidence !== null && (
+                  <span className="text-white/60">{Math.round(confidence * 100)}% Conf</span>
+                )}
               </div>
-              <div className="text-lg font-bold text-white">{answer || 'N/A'}</div>
+              <div className="text-base font-bold text-white break-words">{answer || 'N/A'}</div>
             </div>
             
             {reasoning && (
-              <div className="text-sm text-white/70 leading-relaxed border-l-2 border-white/10 pl-3">
+              <div className="text-sm text-white/70 leading-relaxed border-l-2 border-white/10 pl-3 max-h-40 overflow-y-auto custom-scrollbar">
                 {reasoning}
               </div>
             )}

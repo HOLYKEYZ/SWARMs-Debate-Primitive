@@ -39,7 +39,13 @@ def _finalize_tally(responses: list[dict], agent_count: int, quorum_threshold: f
 
     answers = [resp["response"].get("answer", "").strip().lower() for resp in valid_responses]
     vote_tally = dict(Counter(answers))
-    winning_answer_lower = max(vote_tally, key=vote_tally.get)
+    
+    # Find all answers with the maximum count (handle ties)
+    max_count = max(vote_tally.values())
+    tied_answers = [ans for ans, count in vote_tally.items() if count == max_count]
+    
+    # If there's a tie, prefer the answer from the first agent
+    winning_answer_lower = tied_answers[0]
     winning_count = vote_tally[winning_answer_lower]
 
     winning_answer = winning_answer_lower
@@ -57,6 +63,7 @@ def _finalize_tally(responses: list[dict], agent_count: int, quorum_threshold: f
         "vote_tally": vote_tally,
         "valid_response_count": len(valid_responses),
         "failed_response_count": len(responses) - len(valid_responses),
+        "tie_detected": len(tied_answers) > 1,
     }
 
 

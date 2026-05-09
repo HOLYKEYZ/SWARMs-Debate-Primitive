@@ -68,6 +68,7 @@ export default function DebateArena() {
   const [rounds, setRounds] = useState<number>(3);
   const [quorumThreshold, setQuorumThreshold] = useState<number>(0.75);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showPersonas, setShowPersonas] = useState(true);
   
   const [status, setStatus] = useState<string>("idle");
   const [statusMessage, setStatusMessage] = useState<string>("ready for a new swarm run");
@@ -314,10 +315,10 @@ export default function DebateArena() {
   const transcriptHash = messages.find((m) => m.event === 'transcript_hashed')?.data.hash;
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row gap-10 pb-20 items-start px-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 pb-20 items-start px-6">
       
       {/* Left Sidebar: History */}
-      <div className="hidden lg:block sticky top-32">
+      <div className="hidden xl:block sticky top-32 w-64 flex-shrink-0">
         <SessionHistory 
           sessions={history} 
           onSelect={(id) => {
@@ -327,7 +328,7 @@ export default function DebateArena() {
         />
       </div>
 
-      <div className="flex-1 flex flex-col gap-10 w-full max-w-4xl">
+      <div className="flex-1 flex flex-col gap-10 w-full min-w-0">
         {/* Header & Pipeline */}
         <div className="flex flex-col gap-6">
            <div className="flex justify-between items-end">
@@ -372,7 +373,7 @@ export default function DebateArena() {
         </div>
 
         {/* Input Section */}
-      <div className="glass-panel p-6 rounded-lg border-white/10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="glass-panel p-6 rounded-lg border-white/10 animate-in fade-in slide-in-from-top-4 duration-700 overflow-hidden">
         <h2 className="text-sm font-bold tracking-widest uppercase text-white/50 mb-4 flex items-center gap-2">
             <Play className="w-4 h-4" /> Start Deliberation
         </h2>
@@ -382,9 +383,10 @@ export default function DebateArena() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               disabled={isRunning}
-              rows={question.includes('\n') ? Math.min(question.split('\n').length, 10) : 1}
+              rows={4}
               placeholder="e.g. Should we deploy this smart contract to mainnet?"
-              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-none font-sans leading-relaxed"
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-y font-sans leading-relaxed overflow-y-auto"
+              style={{ minHeight: '120px', maxHeight: '400px' }}
             />
             <div className="flex justify-end">
               <button 
@@ -398,8 +400,8 @@ export default function DebateArena() {
             </div>
           </div>
           
-          {/* Advanced Settings Toggle */}
-          <div className="flex justify-between items-center mt-2">
+          {/* Settings Toggles */}
+          <div className="flex flex-wrap gap-4 justify-between items-center mt-2">
             <button 
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -407,6 +409,15 @@ export default function DebateArena() {
             >
               {showAdvanced ? "Hide Advanced Settings" : "Show Advanced Settings"}
             </button>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={showPersonas}
+                onChange={(e) => setShowPersonas(e.target.checked)}
+                className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-500/50"
+              />
+              <span className="text-xs text-white/40 hover:text-white transition-colors">Show Personas</span>
+            </label>
           </div>
 
           {/* Advanced Settings Panel */}
@@ -447,7 +458,7 @@ export default function DebateArena() {
           )}
 
           {!isRunning && isIdle && (
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div className="flex flex-wrap gap-2 mt-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                <button 
                  type="button"
                  onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // no owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}
@@ -519,7 +530,7 @@ export default function DebateArena() {
               <AgentCard 
                 key={agent.name}
                 name={agent.name}
-                persona={agent.persona}
+                persona={showPersonas ? agent.persona : ''}
                 status={agent.status}
                 answer={agent.answer}
                 reasoning={agent.reasoning}

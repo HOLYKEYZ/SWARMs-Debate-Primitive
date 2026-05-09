@@ -35,7 +35,6 @@ class LLMClient:
         user_prompt: str,
         temperature: float,
         max_tokens: int = 4096,
-        max_retries: int = 3,
     ) -> LLMResponse:
         payload = {
             "model": model,
@@ -53,31 +52,11 @@ class LLMClient:
             "Content-Type": "application/json",
         }
 
-        # Retry logic with exponential backoff
-        for attempt in range(max_retries):
-            try:
-                data = await asyncio.to_thread(self._post_json, headers, payload)
-                content = data.get("choices", [{}])[0].get("message", {}).get("content")
-                if not content:
-                    raise ValueError(f"empty llm response: {json.dumps(data)[:500]}")
-                return LLMResponse(text=content)
-            except Exception as e:
-                error_str = str(e).lower()
-                is_retryable = (
-                    "429" in error_str or 
-                    "rate limit" in error_str or 
-                    "timeout" in error_str or 
-                    "connection" in error_str or
-                    "resource" in error_str
-                )
-                
-                if is_retryable and attempt < max_retries - 1:
-                    delay = 2 ** attempt * 1  # Exponential backoff: 1s, 2s, 4s
-                    print(f"[LLM Client] Retry {attempt + 1}/{max_retries} after {delay}s delay. Error: {str(e)[:100]}")
-                    await asyncio.sleep(delay)
-                    continue
-                else:
-                    raise
+        data = await asyncio.to_thread(self._post_json, headers, payload)
+        content = data.get("choices", [{}])[0].get("message", {}).get("content")
+        if not content:
+            raise ValueError(f"empty llm response: {json.dumps(data)[:500]}")
+        return LLMResponse(text=content)
 
     def _post_json(self, headers: dict, payload: dict) -> dict:
         req = request.Request(
