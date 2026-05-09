@@ -49,7 +49,7 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
               group relative p-5 rounded-[2rem] border text-left transition-all duration-500 overflow-hidden
               ${activeId === s.session_id ? 
                 'bg-[#0a0a0a] border-blue-500/40 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.2)]' : 
-                'bg-[#080808]/40 border-white/[0.03] hover:border-white/10 hover:bg-[#0a0a0a]'}
+                'bg-[#080808] border-white/[0.03] hover:border-white/10 hover:bg-[#0a0a0a]'}
             `}
           >
             {activeId === s.session_id && (
