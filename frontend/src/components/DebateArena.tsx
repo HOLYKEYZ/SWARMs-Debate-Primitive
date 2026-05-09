@@ -185,13 +185,25 @@ export default function DebateArena() {
   const connectSSE = (id: string) => {
     setStatus("running");
     setActiveSessionId(id);
-    const es = new EventSource(apiUrl(`/api/session/${id}/stream`));
+    const streamUrl = apiUrl(`/api/session/${id}/stream`);
+    console.log("Connecting to SSE:", streamUrl);
+    const es = new EventSource(streamUrl);
     eventSourceRef.current = es;
+
+    es.onerror = (error) => {
+      console.error("SSE connection error:", error);
+      setStatus("failed");
+      setStatusMessage("Connection failed. Retrying...");
+      setTimeout(() => {
+        es.close();
+        connectSSE(id);
+      }, 3000);
+    };
 
     const consumeEvent = (eventType: string, rawData: string) => {
       try {
         const payload = JSON.parse(rawData);
-        
+
         if (eventType === "heartbeat") return;
 
         const normalizedPayload = {
@@ -199,7 +211,7 @@ export default function DebateArena() {
           data: payload.data ?? payload,
           timestamp: payload.timestamp ?? new Date().toISOString(),
         };
-        
+
         setMessages((prev) => [...prev, normalizedPayload]);
         handleEvent(normalizedPayload.event, normalizedPayload.data);
 
