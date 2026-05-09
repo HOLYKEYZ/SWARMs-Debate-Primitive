@@ -39,12 +39,15 @@ API_KEY_4="your-api-key-4"
 API_MODEL="meta/llama-3.1-70b-instruct"
 ```
 
-For NVIDIA specifically, you can also use:
+**For NVIDIA NIM**:
+1. Go to https://build.nvidia.com/settings/api-keys
+2. Sign in and create a Personal API Key
+3. Select "NGC Catalog" and "Public API Endpoints" when generating the key
+4. Copy the key and add it to your .env file:
+
 ```env
-NVIDIA_API_KEY_1="your-nvidia-api-key-1"
-NVIDIA_API_KEY_2="your-nvidia-api-key-2"
-NVIDIA_API_KEY_3="your-nvidia-api-key-3"
-NVIDIA_API_KEY_4="your-nvidia-api-key-4"
+API_KEY_1="nvapi-your-personal-api-key"
+API_MODEL="meta/llama-3.1-70b-instruct"
 ```
 
 4. **Generate Solana Wallet**:
