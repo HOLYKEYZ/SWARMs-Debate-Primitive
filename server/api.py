@@ -201,7 +201,7 @@ async def list_agents():
         agents_data = []
         for persona, agent_id in data.get("agents", {}).items():
             # Compute reputation from all completed sessions
-            total_rep = 100.0 # base score
+            total_rep = 0.0 # start at 0
             sessions_count = 0
 
             for session in manager.sessions.values():
