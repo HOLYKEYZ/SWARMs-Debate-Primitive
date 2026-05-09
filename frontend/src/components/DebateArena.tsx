@@ -190,8 +190,13 @@ export default function DebateArena() {
     const es = new EventSource(streamUrl);
     eventSourceRef.current = es;
 
+    es.onopen = () => {
+      console.log("SSE connection opened");
+    };
+
     es.onerror = (error) => {
       console.error("SSE connection error:", error);
+      console.error("EventSource readyState:", es.readyState);
       es.close();
       setStatus("failed");
       setStatusMessage("Connection failed");
