@@ -139,12 +139,12 @@ export default function DebateGraph({ agents, round }: DebateGraphProps) {
   }, [nodes, round]);
 
   return (
-    <div className="glass-panel p-6 rounded-2xl border border-white/5">
+    <div className="glass-panel p-6 rounded-2xl border border-white/5 relative z-0">
       <div className="flex items-center gap-2 mb-4">
         <Network className="w-4 h-4 text-purple-400" />
         <h3 className="text-sm font-bold text-white uppercase tracking-wider">Debate Graph</h3>
       </div>
-      <div className="relative bg-black/20 rounded-xl overflow-hidden">
+      <div className="relative bg-black/20 rounded-xl overflow-hidden z-0">
         <canvas
           ref={canvasRef}
           className="w-full"

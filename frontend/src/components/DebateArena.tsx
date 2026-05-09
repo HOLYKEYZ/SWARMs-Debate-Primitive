@@ -110,10 +110,11 @@ export default function DebateArena() {
         quorum_reached: data.quorum_reached,
         final_answer: data.final_answer,
         winning_answer: data.winning_answer,
+        confidence_score: data.confidence_score ?? 0,
       });
       setChainReceipt(data.chain_signature ? {
         signature: data.chain_signature,
-        tx_url: `https://explorer.solana.com/tx/${data.chain_signature}?cluster=devnet`,
+        explorer_url: `https://explorer.solana.com/tx/${data.chain_signature}?cluster=devnet`,
         verified: data.chain_verified,
       } : null);
       setSynthesisReport(data.synthesis_report);
