@@ -192,12 +192,9 @@ export default function DebateArena() {
 
     es.onerror = (error) => {
       console.error("SSE connection error:", error);
+      es.close();
       setStatus("failed");
-      setStatusMessage("Connection failed. Retrying...");
-      setTimeout(() => {
-        es.close();
-        connectSSE(id);
-      }, 3000);
+      setStatusMessage("Connection failed");
     };
 
     const consumeEvent = (eventType: string, rawData: string) => {
@@ -213,17 +210,17 @@ export default function DebateArena() {
         };
 
         setMessages((prev) => [...prev, normalizedPayload]);
-        handleEvent(normalizedPayload.event, normalizedPayload.data);
+          handleEvent(normalizedPayload.event, normalizedPayload.data);
 
-        if (normalizedPayload.event === "session_complete" || normalizedPayload.event === "error") {
-          es.close();
-          setStatus(normalizedPayload.event === "error" ? "failed" : "complete");
-          fetchHistory();
+          if (normalizedPayload.event === "session_complete" || normalizedPayload.event === "error") {
+            es.close();
+            setStatus(normalizedPayload.event === "error" ? "failed" : "complete");
+            fetchHistory();
+          }
+        } catch (e) {
+          console.error("Error parsing SSE data", e);
         }
-      } catch (e) {
-        console.error("Error parsing SSE data", e);
-      }
-    };
+      };
 
     const eventTypes = [
       "status",
