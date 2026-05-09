@@ -35,6 +35,7 @@ interface QuorumResult {
 interface ChainReceiptData {
   signature: string;
   explorer_url: string;
+  verified?: boolean;
 }
 
 interface SynthesisReportData {
@@ -105,6 +106,7 @@ export default function DebateArena() {
       const data = await res.json();
 
       // Load session data into state
+      setQuestion(data.question || '');
       setSelectorResult(data.selector_result);
       setQuorumResult({
         quorum_reached: data.quorum_reached,
@@ -118,11 +120,31 @@ export default function DebateArena() {
         verified: data.chain_verified,
       } : null);
       setSynthesisReport(data.synthesis_report);
-      setMessages(data.transcript_data?.rounds?.flatMap((r: any) => r.responses) || []);
-      setAgents({});
+
+      // Load messages from transcript data
+      const rounds = data.transcript_data?.rounds || [];
+      const allMessages = rounds.flatMap((r: any) => r.responses || []);
+      setMessages(allMessages);
+
+      // Load agents from final round
+      const agentsState: Record<string, AgentState> = {};
+      if (rounds.length > 0) {
+        const finalRound = rounds[rounds.length - 1];
+        finalRound.responses?.forEach((resp: any) => {
+          agentsState[resp.persona] = {
+            persona: resp.persona,
+            answer: resp.response?.answer || '',
+            confidence: resp.response?.confidence || 0,
+            reasoning: resp.response?.reasoning || '',
+            status: 'responded' as const,
+          };
+        });
+      }
+      setAgents(agentsState);
+
       setStatus(data.status === 'complete' ? 'complete' : 'idle');
       setStatusMessage(data.status === 'complete' ? 'Session complete' : 'Session loaded');
-      setCurrentRound(null);
+      setCurrentRound(rounds.length > 0 ? rounds.length : null);
       setActiveSessionId(sessionId);
 
       if (eventSourceRef.current) {
