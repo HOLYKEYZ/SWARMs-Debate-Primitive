@@ -73,13 +73,13 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-white/20">
+                  <span className="text-[10px] font-bold text-white/20 min-w-[50px] text-right">
                      {new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   {status === 'complete' ? (
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 flex-shrink-0" />
                   ) : (
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
                   )}
                 </div>
               </div>

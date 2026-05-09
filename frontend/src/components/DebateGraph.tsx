@@ -40,7 +40,7 @@ export default function DebateGraph({ agents, round }: DebateGraphProps) {
       name,
       persona: data.persona,
       position: data.answer || 'Pending',
-      confidence: data.confidence || 0,
+      confidence: data.status === 'responded' ? (data.confidence || 0) : 0,
       color: PERSONA_COLORS[data.persona] || '#6b7280',
     }));
     setNodes(newNodes);
