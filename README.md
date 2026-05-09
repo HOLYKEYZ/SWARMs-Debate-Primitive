@@ -29,10 +29,13 @@ pip install -r requirements.txt
 ```
 
 3. **Configuration**:
-   Create a `.env` file in the root directory and add your Gemini API Key:
+   Create a `.env` file in the root directory and add your NVIDIA API Keys:
 
 ```env
-GEMINI_API_KEY="your-gemini-api-key-here"
+NVIDIA_API_KEY_1="your-nvidia-api-key-1"
+NVIDIA_API_KEY_2="your-nvidia-api-key-2"
+NVIDIA_API_KEY_3="your-nvidia-api-key-3"
+NVIDIA_API_KEY_4="your-nvidia-api-key-4"
 ```
 
 4. **Generate Solana Wallet**:
@@ -46,7 +49,25 @@ python -c "from solders.keypair import Keypair; import json; kp = Keypair(); jso
 
 ## How to Run
 
-You can run the main pipeline natively:
+Start the backend server:
+
+```bash
+python server/api.py
+```
+
+The backend will run on `http://localhost:8000`.
+
+Start the frontend (in a separate terminal):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will run on `http://localhost:4000`.
+
+You can also run the main pipeline natively:
 
 ```bash
 python main.py -- ask a question e.g #"Should AI systems be required to explain their decisions?"
