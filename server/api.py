@@ -191,34 +191,42 @@ async def list_agents():
     # Read registry and compute simple stats for the demo
     import json
     import os
-    
+    from agents.reputation import compute_reputation_delta
+
     registry_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "agents", "registry.json")
     try:
         with open(registry_path, 'r') as f:
             data = json.load(f)
-            
+
         agents_data = []
         for persona, agent_id in data.get("agents", {}).items():
-            # In a real app we'd query the DB or chain. Here we just mock lifetime reputation for demo based on recent sessions
+            # Compute reputation from all completed sessions
             total_rep = 100.0 # base score
             sessions_count = 0
-            
+
             for session in manager.sessions.values():
-                if session.transcript_data:
-                    final_round = getattr(session.session_data, "get", lambda x: None)("rounds", [])
-                    if final_round:
-                        for resp in final_round[-1].get("responses", []):
-                            if resp.get("persona") == persona and "reputation_delta" in resp:
-                                total_rep += resp["reputation_delta"]
+                if session.session_data and session.status == "complete":
+                    final_answer = session.session_data.get("final_answer", "")
+                    quorum_reached = session.session_data.get("quorum_reached", False)
+                    rounds = session.session_data.get("rounds", [])
+
+                    if rounds:
+                        final_round = rounds[-1]
+                        for resp in final_round.get("responses", []):
+                            if resp.get("persona") == persona:
+                                answer = resp.get("response", {}).get("answer", "")
+                                confidence = resp.get("response", {}).get("confidence", 0.0)
+                                delta = compute_reputation_delta(answer, final_answer, confidence, quorum_reached)
+                                total_rep += delta
                                 sessions_count += 1
-                                
+
             agents_data.append({
                 "persona": persona,
                 "agent_id": agent_id,
                 "reputation_score": round(total_rep, 2),
                 "sessions_participated": sessions_count
             })
-            
+
         return sorted(agents_data, key=lambda x: x["reputation_score"], reverse=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
