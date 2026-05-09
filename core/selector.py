@@ -3,25 +3,12 @@ import time
 import config
 from core.llm_client import LLMClient
 
-# fallback keyword lists for when the api is unavailable
-DEBATE_SIGNALS = [
-    "should", "why", "explain", "ethical", "moral", "strategy",
-    "complex", "better", "worse", "evaluate", "subjective",
-    "deploy", "audit", "review", "security", "risk"
-]
-
-VOTE_SIGNALS = [
-    "what is", "how many", "who", "when", "where", "true or false",
-    "yes or no", "fact", "calculate", "define"
-]
-
 
 class MetaAgent:
     """
     ai-powered governance routing agent.
     analyzes questions using llm reasoning to decide debate vs vote,
     then logs its decision rationale on-chain for auditability.
-    falls back to keyword matching if the api is unavailable.
     """
 
     SYSTEM_PROMPT = (
@@ -64,12 +51,16 @@ class MetaAgent:
             return self._ai_decide(question)
         except Exception as e:
             masked = f"...{self.api_key[-4:]}" if hasattr(self, 'api_key') and self.api_key else "unknown"
-            err_msg = f"API Error (key {masked}): {str(e)[:60]}... Falling back to keywords."
+            err_msg = f"API Error (key {masked}): {str(e)[:100]}"
             print(f"  [meta-agent] {err_msg}")
             
-            res = self._keyword_fallback(question)
-            res["reasoning"] = f"{err_msg} | {res['reasoning']}"
-            return res
+            # no fallback - fail if api is unavailable
+            return {
+                "mechanism": "vote",
+                "reasoning": f"API Error: {err_msg}. Cannot determine mechanism without AI.",
+                "confidence": 0.0,
+                "source": "error"
+            }
 
     def _ai_decide(self, question: str) -> dict:
         """use the configured llm to reason about the question and pick a mechanism."""
@@ -114,35 +105,6 @@ class MetaAgent:
                     time.sleep(delay)
                     continue
                 raise
-
-    def _keyword_fallback(self, question: str) -> dict:
-        """fallback keyword matching when ai is unavailable."""
-        question_lower = question.lower()
-
-        for signal in VOTE_SIGNALS:
-            if signal in question_lower:
-                return {
-                    "mechanism": "vote",
-                    "reasoning": f"Keyword fallback: detected factual signal ('{signal}').",
-                    "confidence": 0.6,
-                    "source": "keyword_fallback"
-                }
-
-        for signal in DEBATE_SIGNALS:
-            if signal in question_lower:
-                return {
-                    "mechanism": "debate",
-                    "reasoning": f"Keyword fallback: detected complexity signal ('{signal}').",
-                    "confidence": 0.6,
-                    "source": "keyword_fallback"
-                }
-
-        return {
-            "mechanism": "vote",
-            "reasoning": "Keyword fallback: no strong signals detected, defaulting to efficient vote.",
-            "confidence": 0.5,
-            "source": "keyword_fallback"
-        }
 
 
 def decide_mechanism(question: str, num_agents: int = None) -> tuple[str, str]:

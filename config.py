@@ -33,33 +33,12 @@ for i in range(1, 10):
         API_KEYS.append(key)
         API_MODELS.append(model or os.getenv("API_MODEL", "meta/llama-3.1-70b-instruct"))
 
-# Legacy support for NVIDIA keys (fallback)
-NVIDIA_API_KEYS = []
-NVIDIA_MODELS = []
-for i in range(1, 10):
-    key_name = "NVIDIA_API_KEY" if i == 1 else f"NVIDIA_API_KEY{i}"
-    model_name = "NVIDIA_MODEL" if i == 1 else f"NVIDIA_MODEL{i}"
-    key = os.getenv(key_name, "")
-    model = os.getenv(model_name, "")
-    if key:
-        NVIDIA_API_KEYS.append(key)
-        NVIDIA_MODELS.append(model or os.getenv("NVIDIA_MODEL", "moonshotai/kimi-k2-thinking"))
-
-# Use generic keys if available, otherwise fall back to NVIDIA
-if not API_KEYS and NVIDIA_API_KEYS:
-    API_KEYS = NVIDIA_API_KEYS
-    API_MODELS = NVIDIA_MODELS
-
 GEMINI_API_KEYS = []
 for i in range(1, 10):
     key_name = "GEMINI_API_KEY" if i == 1 else f"GEMINI_API_KEY{i}"
     k = os.getenv(key_name, "")
     if k:
         GEMINI_API_KEYS.append(k)
-
-# fallback if empty
-if not GEMINI_API_KEYS:
-    GEMINI_API_KEYS = [os.getenv("GEMINI_API_KEY", "")]
 
 # Solana configuration
 SOLANA_RPC_URL = "https://api.devnet.solana.com"
