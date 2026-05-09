@@ -24,8 +24,9 @@ COPY frontend/postcss.config.mjs frontend/
 COPY frontend/src/ ./frontend/src/
 COPY frontend/public/ ./frontend/public/
 
-# Install Node.js and frontend dependencies
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+# Install curl and Node.js, then build frontend
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     cd frontend && npm install && npm run build
 
