@@ -61,7 +61,7 @@ python -c "from solders.keypair import Keypair; import json; kp = Keypair(); jso
 Start the backend server:
 
 ```bash
-python server/api.py
+python -m uvicorn server.api:app --host 0.0.0.0 --port 8000
 ```
 
 The backend will run on `http://localhost:8000`.
