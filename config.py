@@ -21,6 +21,19 @@ load_dotenv()
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "nvidia").lower()
 
 NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
+# Generic API Keys - supports any provider
+API_KEYS = []
+API_MODELS = []
+for i in range(1, 10):
+    key_name = "API_KEY" if i == 1 else f"API_KEY{i}"
+    model_name = "API_MODEL" if i == 1 else f"API_MODEL{i}"
+    key = os.getenv(key_name, "")
+    model = os.getenv(model_name, "")
+    if key:
+        API_KEYS.append(key)
+        API_MODELS.append(model or os.getenv("API_MODEL", "meta/llama-3.1-70b-instruct"))
+
+# Legacy support for NVIDIA keys (fallback)
 NVIDIA_API_KEYS = []
 NVIDIA_MODELS = []
 for i in range(1, 10):
@@ -31,6 +44,11 @@ for i in range(1, 10):
     if key:
         NVIDIA_API_KEYS.append(key)
         NVIDIA_MODELS.append(model or os.getenv("NVIDIA_MODEL", "moonshotai/kimi-k2-thinking"))
+
+# Use generic keys if available, otherwise fall back to NVIDIA
+if not API_KEYS and NVIDIA_API_KEYS:
+    API_KEYS = NVIDIA_API_KEYS
+    API_MODELS = NVIDIA_MODELS
 
 GEMINI_API_KEYS = []
 for i in range(1, 10):

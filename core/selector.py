@@ -39,8 +39,8 @@ class MetaAgent:
     )
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key if api_key else config.NVIDIA_API_KEYS[0]
-        self.llm = LLMClient(api_keys=config.NVIDIA_API_KEYS)
+        self.api_key = api_key if api_key else config.API_KEYS[0]
+        self.llm = LLMClient(api_keys=config.API_KEYS)
 
     def analyze(self, question: str, num_agents: int = None) -> dict:
         """

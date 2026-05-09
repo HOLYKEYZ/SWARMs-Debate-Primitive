@@ -24,7 +24,7 @@ class Agent:
         self.system_prompt = self.PERSONAS[persona_type]
         self.on_retry = on_retry
         
-        self.api_keys = api_keys or ([api_key] if api_key else config.NVIDIA_API_KEYS)
+        self.api_keys = api_keys or ([api_key] if api_key else config.API_KEYS)
         self.llm = LLMClient(api_keys=self.api_keys)
         self.current_key_index = 0
         self._init_client()

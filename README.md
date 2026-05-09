@@ -29,8 +29,17 @@ pip install -r requirements.txt
 ```
 
 3. **Configuration**:
-   Create a `.env` file in the root directory and add your NVIDIA API Keys:
+   Create a `.env` file in the root directory and add your API Keys (supports any provider):
 
+```env
+API_KEY_1="your-api-key-1"
+API_KEY_2="your-api-key-2"
+API_KEY_3="your-api-key-3"
+API_KEY_4="your-api-key-4"
+API_MODEL="meta/llama-3.1-70b-instruct"
+```
+
+For NVIDIA specifically, you can also use:
 ```env
 NVIDIA_API_KEY_1="your-nvidia-api-key-1"
 NVIDIA_API_KEY_2="your-nvidia-api-key-2"
