@@ -105,46 +105,26 @@ export default function DebateArena() {
       const res = await fetch(apiUrl(`/api/session/${sessionId}`));
       const data = await res.json();
 
-      // Load session data into state
-      setQuestion(data.question || '');
       setSelectorResult(data.selector_result);
+
       setQuorumResult({
         quorum_reached: data.quorum_reached,
         final_answer: data.final_answer,
         winning_answer: data.winning_answer,
         confidence_score: data.confidence_score ?? 0,
       });
+
       setChainReceipt(data.chain_signature ? {
         signature: data.chain_signature,
         explorer_url: `https://explorer.solana.com/tx/${data.chain_signature}?cluster=devnet`,
-        verified: data.chain_verified,
       } : null);
+
       setSynthesisReport(data.synthesis_report);
-
-      // Load messages from transcript data
-      const rounds = data.transcript_data?.rounds || [];
-      const allMessages = rounds.flatMap((r: any) => r.responses || []);
-      setMessages(allMessages);
-
-      // Load agents from final round
-      const agentsState: Record<string, AgentState> = {};
-      if (rounds.length > 0) {
-        const finalRound = rounds[rounds.length - 1];
-        finalRound.responses?.forEach((resp: any) => {
-          agentsState[resp.persona] = {
-            persona: resp.persona,
-            answer: resp.response?.answer || '',
-            confidence: resp.response?.confidence || 0,
-            reasoning: resp.response?.reasoning || '',
-            status: 'responded' as const,
-          };
-        });
-      }
-      setAgents(agentsState);
-
+      setMessages(data.transcript_data?.rounds?.flatMap((r: any) => r.responses) || []);
+      setAgents({});
       setStatus(data.status === 'complete' ? 'complete' : 'idle');
       setStatusMessage(data.status === 'complete' ? 'Session complete' : 'Session loaded');
-      setCurrentRound(rounds.length > 0 ? rounds.length : null);
+      setCurrentRound(null);
       setActiveSessionId(sessionId);
 
       if (eventSourceRef.current) {
@@ -374,7 +354,7 @@ export default function DebateArena() {
     <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 pb-20 items-start px-6 overflow-x-hidden">
       
       {/* Left Sidebar: History */}
-      <div className="hidden xl:block sticky top-32 w-64 flex-shrink-0 overflow-hidden">
+      <div className="hidden xl:block sticky top-32 w-80 flex-shrink-0">
         <SessionHistory
           sessions={history}
           onSelect={(id) => {
