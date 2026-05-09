@@ -51,10 +51,11 @@ def _finalize_tally(responses: list[dict], agent_count: int, quorum_threshold: f
     winning_answer = winning_answer_lower
     for resp in valid_responses:
         if resp["response"].get("answer", "").strip().lower() == winning_answer_lower:
-            winning_answer = resp["response"]["answer"].strip()
+            winning_answer = resp["response"].get("answer", "").strip()
             break
 
-    confidence_score = winning_count / agent_count
+    # calculate confidence based on valid responses, not total agent count
+    confidence_score = winning_count / len(valid_responses) if valid_responses else 0.0
 
     return {
         answer_key: winning_answer,
