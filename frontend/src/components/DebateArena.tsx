@@ -255,6 +255,27 @@ export default function DebateArena() {
     };
   };
 
+  // Reconnect to SSE when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && activeSessionId && status === 'running') {
+        console.log("Tab became visible, reconnecting to SSE");
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+        }
+        // Fetch current session state to catch up
+        loadSession(activeSessionId);
+        // Reconnect to SSE for live updates
+        connectSSE(activeSessionId);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeSessionId, status, loadSession]);
+
   const handleEvent = (eventType: string, data: Record<string, unknown>) => {
     const agentName = typeof data.agent === "string" ? data.agent : null;
 
