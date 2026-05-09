@@ -47,7 +47,7 @@ export default function AnalyticsDashboard() {
           completed_sessions: completed,
           debate_count: debates,
           vote_count: votes,
-          avg_confidence: 0.75, // Mock - would calculate from real data
+          avg_confidence: 0, // Start at 0, calculate from actual session data
           quorum_rate: completed / sessionsData.length || 0,
         });
       } catch (error) {

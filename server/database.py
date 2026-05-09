@@ -27,7 +27,7 @@ class AgentReputation(Base):
     id = Column(String, primary_key=True)
     agent_name = Column(String, nullable=False, unique=True)
     persona = Column(String, nullable=False)
-    reputation_score = Column(Float, default=100.0)
+    reputation_score = Column(Float, default=0.0)
     sessions_participated = Column(Integer, default=0)
     correct_predictions = Column(Integer, default=0)
     position_changes = Column(Integer, default=0)

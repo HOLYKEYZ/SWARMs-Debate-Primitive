@@ -21,7 +21,7 @@ def init_agent_reputation():
                     id=agent["name"],
                     agent_name=agent["name"],
                     persona=agent["persona"],
-                    reputation_score=100.0,
+                    reputation_score=0.0,
                     sessions_participated=0,
                     correct_predictions=0,
                     position_changes=0,
