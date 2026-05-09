@@ -5,4 +5,4 @@ pydantic==2.5.0
 sqlalchemy==2.0.23
 solana==0.30.2
 python-dotenv==1.0.0
-httpx==0.25.2
+httpx==0.23.3
