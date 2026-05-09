@@ -20,8 +20,8 @@ class SynthesisAgent:
     )
 
     def __init__(self, api_key: str = None):
-        self.api_key = api_key if api_key else config.NVIDIA_API_KEYS[0]
-        self.llm = LLMClient(api_keys=config.NVIDIA_API_KEYS)
+        self.api_key = api_key if api_key else config.API_KEYS[0]
+        self.llm = LLMClient(api_keys=config.API_KEYS)
 
     def synthesize(self, question: str, rounds: list) -> dict:
         """Analyze the full debate history and synthesize a final report."""

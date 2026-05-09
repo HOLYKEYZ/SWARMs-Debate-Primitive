@@ -17,10 +17,10 @@ class LLMClient:
         if config.LLM_PROVIDER != "nvidia":
             raise ValueError(f"Unsupported LLM provider: {config.LLM_PROVIDER}")
 
-        self.api_keys = [key for key in (api_keys or config.NVIDIA_API_KEYS) if key]
-        self.models = models or config.NVIDIA_MODELS
+        self.api_keys = [key for key in (api_keys or config.API_KEYS) if key]
+        self.models = models or config.API_MODELS
         if not self.api_keys:
-            raise ValueError("No NVIDIA API keys configured.")
+            raise ValueError("No API keys configured.")
 
     def model_for_index(self, index: int) -> str:
         if self.models:

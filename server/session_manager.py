@@ -490,7 +490,7 @@ class SessionManager:
 
     def _create_agents(self, session: Session) -> list[Agent]:
         """initialize agents for the session with rate-limit tracking."""
-        keys = config.NVIDIA_API_KEYS
+        keys = config.API_KEYS
         personas = list(Agent.PERSONAS.keys())
         
         def on_agent_retry(name, attempt, delay):
