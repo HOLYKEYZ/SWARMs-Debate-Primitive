@@ -121,7 +121,10 @@ export default function DebateArena() {
 
       setSynthesisReport(data.synthesis_report);
       setMessages(data.transcript_data?.rounds?.flatMap((r: any) => r.responses) || []);
-      setAgents({});
+      // Don't clear agents - preserve their responses
+      if (data.status === 'complete') {
+        setAgents({});
+      }
       setStatus(data.status === 'complete' ? 'complete' : 'idle');
       setStatusMessage(data.status === 'complete' ? 'Session complete' : 'Session loaded');
       setCurrentRound(null);
@@ -624,7 +627,7 @@ export default function DebateArena() {
         {/* Quorum / Receipt Section */}
         {(quorumResult || synthesisReport) && (
           <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
-             {quorumResult && <QuorumMeter confidence={quorumResult.confidence_score} />}
+             {quorumResult && <QuorumMeter confidence={quorumResult.confidence_score} threshold={quorumThreshold} />}
 
              {quorumResult?.final_answer && (
                <div className="glass-panel rounded-lg p-5 border-white/10">
