@@ -2,6 +2,16 @@
 
 A multi-agent debate and vote coordination system that turns AI deliberation into trust-minimized coordination infrastructure on the Solana blockchain. Agents assume distinct personas (Analyst, Critic, Advocate, Skeptic) to debate or vote on complex questions. Once quorum is reached, the full session transcript and outcomes are serialized, hashed, and permanently recorded on the Solana Devnet via the Memo program, providing a verifiable block-proof of AI consensus.
 
+## Recent Updates
+
+- **Session History Loading**: Fixed session history click to properly load and display past session data
+- **UI Fixes**: Fixed timestamp clipping (increased min-width to 80px), session card overlapping, and debate graph z-index issues
+- **Data Loading**: Added missing confidence_score to quorumResult and fixed ChainReceipt field name (tx_url → explorer_url)
+- **Wallet Integration**: Replaced dynamic wallet import with custom button for better styling and clickability
+- **Performance**: Increased agent API timeout from 20s to 60s for longer responses
+- **Reputation Scoring**: Fixed agent reputation scoring to compute from actual session data
+- **Sidebar**: Added fallback values for missing session data fields to prevent rendering issues
+
 ## How It Works
 
 1. **Routing**: A heuristic selector analyzes the user’s question. Simple factual queries trigger an independent parallel **Vote**, while complex ethical or strategic questions trigger a multi-round decentralized **Debate** where agents share and build upon peer opinions.
