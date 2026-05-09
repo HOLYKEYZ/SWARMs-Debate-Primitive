@@ -113,7 +113,7 @@ class Agent:
                         user_prompt=user_content,
                         temperature=0.7,
                     ),
-                    timeout=20.0
+                    timeout=60.0
                 )
                 return self._parse_response(response.text)
 
