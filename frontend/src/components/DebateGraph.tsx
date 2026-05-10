@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Network } from 'lucide-react';
 
 interface AgentNode {
@@ -31,11 +31,10 @@ const PERSONA_COLORS: Record<string, string> = {
 
 export default function DebateGraph({ agents, round }: DebateGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [nodes, setNodes] = useState<AgentNode[]>([]);
 
-  useEffect(() => {
-    const agentEntries = Object.entries(agents);
-    const newNodes: AgentNode[] = agentEntries.map(([name, data], index) => ({
+  // derive nodes during render to avoid cascading setState in effects
+  const nodes = useMemo<AgentNode[]>(() => {
+    return Object.entries(agents).map(([name, data]) => ({
       id: name,
       name,
       persona: data.persona,
@@ -43,7 +42,6 @@ export default function DebateGraph({ agents, round }: DebateGraphProps) {
       confidence: data.status === 'responded' ? (data.confidence || 0) : 0,
       color: PERSONA_COLORS[data.persona] || '#6b7280',
     }));
-    setNodes(newNodes);
   }, [agents]);
 
   useEffect(() => {
