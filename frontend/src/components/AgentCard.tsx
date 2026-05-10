@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Brain, User, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, User, RefreshCw, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -26,6 +26,24 @@ const personaColors: Record<string, string> = {
   Skeptic: 'text-amber-400 border-amber-400/30 bg-amber-400/5',
 };
 
+// Determine stance from answer text
+function getStance(answer?: string): 'support' | 'against' | 'neutral' {
+  if (!answer) return 'neutral';
+  
+  const lower = answer.toLowerCase();
+  
+  // Strong support indicators
+  const supportWords = ['yes', 'support', 'agree', 'approve', 'favor', 'should', 'recommend', 'positive', 'beneficial', 'true', 'correct'];
+  const againstWords = ['no', 'against', 'disagree', 'reject', 'oppose', 'should not', 'shouldn\'t', 'negative', 'harmful', 'false', 'incorrect'];
+  
+  const supportCount = supportWords.filter(word => lower.includes(word)).length;
+  const againstCount = againstWords.filter(word => lower.includes(word)).length;
+  
+  if (supportCount > againstCount) return 'support';
+  if (againstCount > supportCount) return 'against';
+  return 'neutral';
+}
+
 export default function AgentCard({ 
   name, 
   persona, 
@@ -41,6 +59,15 @@ export default function AgentCard({
   
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
   const hasContent = (status === 'responded' || answer) && !retryMessage;
+  const stance = getStance(answer);
+  
+  const stanceConfig = {
+    support: { icon: ThumbsUp, color: 'text-green-400 bg-green-400/10 border-green-400/30', label: 'Supporting' },
+    against: { icon: ThumbsDown, color: 'text-red-400 bg-red-400/10 border-red-400/30', label: 'Against' },
+    neutral: { icon: Minus, color: 'text-gray-400 bg-gray-400/10 border-gray-400/30', label: 'Neutral' },
+  };
+  
+  const StanceIcon = stanceConfig[stance].icon;
   
   return (
     <div className={cn(
@@ -54,6 +81,17 @@ export default function AgentCard({
       {positionChanged && (
         <div className="absolute top-0 right-0 bg-yellow-500/20 text-yellow-300 text-[10px] uppercase font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1 animate-pulse">
           <RefreshCw className="w-3 h-3" /> Position Changed
+        </div>
+      )}
+      
+      {/* Stance Indicator */}
+      {hasContent && (
+        <div className={cn(
+          "absolute top-4 right-4 px-3 py-1.5 rounded-lg border flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider",
+          stanceConfig[stance].color
+        )}>
+          <StanceIcon className="w-3.5 h-3.5" />
+          {stanceConfig[stance].label}
         </div>
       )}
 
