@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Brain, User, RefreshCw, Maximize2 } from 'lucide-react';
-import AgentResponseModal from './AgentResponseModal';
+import { Brain, User, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -18,7 +17,6 @@ interface AgentCardProps {
   confidence?: number;
   positionChanged?: boolean;
   retryMessage?: string;
-  onExpand?: () => void;
 }
 
 const personaColors: Record<string, string> = {
@@ -37,23 +35,19 @@ export default function AgentCard({
   reasoning, 
   confidence, 
   positionChanged,
-  retryMessage,
-  onExpand
+  retryMessage
 }: AgentCardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
-  
-  const handleExpand = () => {
-    setIsModalOpen(true);
-    if (onExpand) onExpand();
-  };
+  const hasContent = (status === 'responded' || answer) && !retryMessage;
   
   return (
     <div className={cn(
-      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col h-full min-h-[260px]",
+      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col",
       isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-70 scale-100",
-      colorClass.split(' ')[2]
+      colorClass.split(' ')[2],
+      isExpanded ? "min-h-[500px]" : "min-h-[260px]"
     )}>
       
       {/* Position Change Indicator */}
@@ -64,27 +58,43 @@ export default function AgentCard({
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center border",
-          colorClass.split(' ').slice(0, 2).join(' ')
-        )}>
-          {status === 'thinking' ? (
-             <Brain className="w-5 h-5 animate-pulse" />
-          ) : (
-             <User className="w-5 h-5" />
-          )}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center border",
+            colorClass.split(' ').slice(0, 2).join(' ')
+          )}>
+            {status === 'thinking' ? (
+               <Brain className="w-5 h-5 animate-pulse" />
+            ) : (
+               <User className="w-5 h-5" />
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-black text-white/90 tracking-tight">{name}</h3>
+            <span className={cn("text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
+              {retryMessage ? 'Rate Limited' : persona}
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <h3 className="text-sm font-black text-white/90 tracking-tight group-hover:text-white transition-colors">{name}</h3>
-          <span className={cn("text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
-            {retryMessage ? 'Rate Limited' : persona}
-          </span>
-        </div>
+        
+        {hasContent && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+            title={isExpanded ? "Collapse" : "Expand"}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-white/60" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-white/60" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col justify-start min-h-[60px] relative">
+      <div className="flex-1 flex flex-col justify-start relative">
         {retryMessage ? (
           <div className="flex flex-col gap-2 items-center text-center animate-in fade-in zoom-in">
             <p className="text-xs font-medium text-amber-400/80 italic">{retryMessage}</p>
@@ -104,45 +114,46 @@ export default function AgentCard({
           </div>
         ) : null}
 
-        {(status === 'responded' || answer) && (
+        {hasContent && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative">
-              <div className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-2 flex justify-between items-center">
-                <span>Position</span>
-                <div className="flex items-center gap-3">
-                  {confidence !== undefined && confidence !== null && confidence >= 0 && (
-                    <span className="text-white/60">{Math.round(confidence * 100)}% Conf</span>
-                  )}
-                  <button
-                    onClick={handleExpand}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
-                    title="Expand response"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5 text-white/40 group-hover:text-white/80" />
-                  </button>
+            {/* Position */}
+            <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+              <div className="flex justify-between items-center mb-3">
+                <div className="text-xs text-white/40 uppercase tracking-widest font-semibold">
+                  Position
                 </div>
+                {confidence !== undefined && confidence !== null && confidence >= 0 && (
+                  <div className="text-xs text-white/60 font-bold">
+                    {Math.round(confidence * 100)}% Confidence
+                  </div>
+                )}
               </div>
-              <div className="text-lg font-bold text-white break-words leading-snug line-clamp-3">{answer || 'N/A'}</div>
+              <div className={cn(
+                "text-base font-bold text-white break-words leading-relaxed",
+                !isExpanded && "line-clamp-2"
+              )}>
+                {answer || 'N/A'}
+              </div>
             </div>
             
+            {/* Reasoning */}
             {reasoning && (
-              <div className="text-base text-white/75 leading-7 border-l-2 border-white/10 pl-4 whitespace-pre-wrap break-words line-clamp-4">
-                {reasoning}
+              <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+                <div className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-3">
+                  Reasoning
+                </div>
+                <div className={cn(
+                  "text-sm text-white/80 leading-relaxed whitespace-pre-wrap break-words",
+                  !isExpanded && "line-clamp-3"
+                )}>
+                  {reasoning}
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
 
-      <AgentResponseModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        name={name}
-        persona={persona}
-        answer={answer}
-        reasoning={reasoning}
-        confidence={confidence}
-      />
     </div>
   );
 }

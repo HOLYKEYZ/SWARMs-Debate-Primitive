@@ -91,6 +91,7 @@ export default function DebateArena() {
   const [statusMessage, setStatusMessage] = useState<string>("ready for a new swarm run");
   const [currentRound, setCurrentRound] = useState<number | null>(null);
   const [messages, setMessages] = useState<EventData[]>([]);
+  const [isConnected, setIsConnected] = useState<boolean>(true);
   
   // state from events
   const [selectorResult, setSelectorResult] = useState<SelectorResult | null>(null);
@@ -372,25 +373,31 @@ export default function DebateArena() {
 
     es.onmessage = (event) => consumeEvent("message", event.data);
 
-    es.onerror = () => {
-      // EventSource fires onerror when the server closes the stream after session_complete.
-      // Treat closure during 'running' as a graceful end; only surface as failure if no terminal event arrived.
-      console.log("SSE connection closed, readyState:", es.readyState);
-      es.close();
-      setStatus((currentStatus) => currentStatus === "running" ? "complete" : currentStatus);
+    es.onerror = (error) => {
+      console.log("SSE error or connection closed, readyState:", es.readyState);
+      
+      // If connection is closed and we're still running, try to reconnect
+      if (es.readyState === EventSource.CLOSED) {
+        setStatus((currentStatus) => {
+          if (currentStatus === "running") {
+            console.log("SSE closed while running, will attempt reconnect on visibility");
+            return "running"; // Keep status as running
+          }
+          return currentStatus === "running" ? "complete" : currentStatus;
+        });
+      }
     };
   }, [handleEvent, fetchHistory]);
 
   // reconnect to SSE when tab becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && activeSessionId && status === 'running') {
+      if (document.visibilityState === 'visible' && activeSessionId) {
         console.log("Tab became visible, reconnecting to SSE");
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
+        if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
+          console.log("SSE already connected, skipping reconnect");
+          return;
         }
-        // fetch current session state to catch up
-        loadSession(activeSessionId);
         // reconnect to SSE for live updates
         connectSSE(activeSessionId);
       }
@@ -400,7 +407,7 @@ export default function DebateArena() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeSessionId, status, loadSession, connectSSE]);
+  }, [activeSessionId, connectSSE]);
 
   const isIdle = status === "idle";
   const isRunning = ["submitting", "selecting", "running", "synthesizing", "hashing", "chain"].includes(status);
@@ -627,7 +634,7 @@ export default function DebateArena() {
           {/* Debate Graph Visualization */}
           <DebateGraph agents={agents} round={currentRound} />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full auto-rows-auto">
             {renderedAgents.map((agent) => (
               <div key={agent.name} className="min-w-0">
                 <AgentCard 
