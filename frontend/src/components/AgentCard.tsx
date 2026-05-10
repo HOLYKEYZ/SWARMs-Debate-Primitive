@@ -42,7 +42,7 @@ export default function AgentCard({
   
   return (
     <div className={cn(
-      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col h-full min-h-[200px]",
+      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col h-full min-h-[260px]",
       isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-70 scale-100",
       colorClass.split(' ')[2]
     )}>
@@ -75,7 +75,7 @@ export default function AgentCard({
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col justify-center min-h-[60px] relative">
+      <div className="flex-1 flex flex-col justify-start min-h-[60px] relative">
         {retryMessage ? (
           <div className="flex flex-col gap-2 items-center text-center animate-in fade-in zoom-in">
             <p className="text-xs font-medium text-amber-400/80 italic">{retryMessage}</p>
@@ -104,11 +104,11 @@ export default function AgentCard({
                   <span className="text-white/60">{Math.round(confidence * 100)}% Conf</span>
                 )}
               </div>
-              <div className="text-base font-bold text-white break-words">{answer || 'N/A'}</div>
+              <div className="text-lg font-bold text-white break-words leading-snug">{answer || 'N/A'}</div>
             </div>
             
             {reasoning && (
-              <div className="text-sm text-white/70 leading-relaxed border-l-2 border-white/10 pl-3 max-h-40 overflow-y-auto custom-scrollbar">
+              <div className="text-base text-white/75 leading-8 border-l-2 border-white/10 pl-4 whitespace-pre-wrap break-words">
                 {reasoning}
               </div>
             )}
