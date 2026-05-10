@@ -8,6 +8,7 @@ interface Session {
   mechanism: string;
   created_at: string;
   final_answer?: string;
+  agent_count?: number;
 }
 
 interface SessionHistoryProps {
@@ -46,6 +47,8 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
           const status = s.status || 'pending';
           const createdAt = s.created_at || new Date().toISOString();
           const question = s.question || 'No question';
+          const agentCount = typeof s.agent_count === 'number' && s.agent_count > 0 ? s.agent_count : 4;
+          const dotCount = Math.min(agentCount, 4);
 
           return (
             <button
@@ -91,11 +94,11 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
               <div className="flex items-center justify-between mt-auto">
                 <div className="flex items-center gap-3">
                   <div className="flex -space-x-1.5">
-                     {[1,2,3].map(i => (
+                     {Array.from({ length: dotCount }).map((_, i) => (
                        <div key={i} className="w-4 h-4 rounded-full border border-black bg-white/5" />
                      ))}
                   </div>
-                  <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">4 Agents</span>
+                  <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{agentCount} Agents</span>
                 </div>
                 <ChevronRight className={`w-3.5 h-3.5 text-blue-500 transition-all duration-500 ${activeId === s.session_id ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0'}`} />
               </div>

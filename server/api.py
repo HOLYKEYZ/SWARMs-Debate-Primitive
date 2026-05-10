@@ -1,61 +1,48 @@
+import os
 import json
 import asyncio
 import time
 from collections import defaultdict
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator, constr
 from sse_starlette.sse import EventSourceResponse
-from contextlib import asynccontextmanager
 
 from server.session_manager import SessionManager
 from chain.solana_client import SolanaClient
 from server.database import init_db
 from server.agent_reputation import init_agent_reputation, get_leaderboard
+from agents.reputation import compute_reputation_delta
+import config
 
-app = FastAPI(
-    title="SWARMs Debate Primitive",
-    description="Multi-agent AI coordination with on-chain verification",
-    version="1.0.0"
-)
-
-# cors — allow frontend dev server and production
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:4000", "http://127.0.0.1:4000", "*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# shared session manager instance
-manager = SessionManager()
-
-# Simple in-memory rate limiter
+# rate limiter config
+RATE_LIMIT_REQUESTS = 60
+RATE_LIMIT_WINDOW = 60
 rate_limit_store = defaultdict(list)
-RATE_LIMIT_REQUESTS = 60  # requests per minute
-RATE_LIMIT_WINDOW = 60  # seconds
+
+# allowed origins from env, comma separated. localhost dev defaults included.
+_default_origins = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:4000,http://127.0.0.1:4000"
+ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
 
 
 def check_rate_limit(client_ip: str) -> bool:
-    """Check if client has exceeded rate limit."""
+    """check if client has exceeded rate limit."""
     now = time.time()
-    # Remove old requests outside the window
     rate_limit_store[client_ip] = [
         timestamp for timestamp in rate_limit_store[client_ip]
         if now - timestamp < RATE_LIMIT_WINDOW
     ]
-    
     if len(rate_limit_store[client_ip]) >= RATE_LIMIT_REQUESTS:
         return False
-    
     rate_limit_store[client_ip].append(now)
     return True
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database and agent reputation on startup."""
+    """initialize database and agent reputation on startup."""
     init_db()
     init_agent_reputation()
     yield
@@ -65,8 +52,19 @@ app = FastAPI(
     title="SWARMs Debate Primitive",
     description="Multi-agent AI coordination with on-chain verification",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# shared session manager instance
+manager = SessionManager()
 
 
 class SubmitRequest(BaseModel):
@@ -188,11 +186,6 @@ async def list_sessions(limit: int = 20):
 @app.get("/api/agents")
 async def list_agents():
     """list agent reputation statistics."""
-    # Read registry and compute simple stats for the demo
-    import json
-    import os
-    from agents.reputation import compute_reputation_delta
-
     registry_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "agents", "registry.json")
     try:
         with open(registry_path, 'r') as f:
@@ -245,12 +238,24 @@ async def verify_signature(signature: str):
 
 @app.get("/api/health")
 async def health():
-    """Health check endpoint with detailed status."""
+    """health check endpoint. verifies database connectivity and api key presence."""
+    db_ok = False
+    try:
+        from server.database import SessionLocal, SessionModel
+        db = SessionLocal()
+        try:
+            db.query(SessionModel).limit(1).all()
+            db_ok = True
+        finally:
+            db.close()
+    except Exception:
+        db_ok = False
+
     return {
-        "status": "ok",
+        "status": "ok" if db_ok and bool(config.API_KEYS) else "degraded",
         "service": "swarms-debate-primitive",
-        "version": "1.0.0",
-        "database": "connected",
-        "llm_provider": "nvidia",
-        "agents_online": 4
+        "version": app.version,
+        "database": "connected" if db_ok else "unavailable",
+        "api_keys_configured": len(config.API_KEYS),
+        "active_sessions": len(manager.sessions),
     }
