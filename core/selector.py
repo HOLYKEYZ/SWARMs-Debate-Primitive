@@ -98,10 +98,10 @@ class MetaAgent:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str or "quota" in error_str
+                is_retryable = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "timeout" in error_str or "timed out" in error_str
                 if is_retryable and attempt < 2:
                     delay = 10 * (2 ** attempt)
-                    print(f"  [meta-agent] rate limited, waiting {delay}s (attempt {attempt + 1}/3)...")
+                    print(f"  [meta-agent] transient api error, waiting {delay}s (attempt {attempt + 1}/3)...")
                     time.sleep(delay)
                     continue
                 raise
