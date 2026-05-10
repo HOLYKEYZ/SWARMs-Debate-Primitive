@@ -1,7 +1,7 @@
 import json
 import asyncio
 import config
-from core.llm_client import LLMClient
+from core.multi_provider_client import create_mixed_provider_client, MultiProviderClient
 
 # max retries for api calls
 MAX_RETRIES = 5
@@ -24,21 +24,18 @@ class Agent:
         self.system_prompt = self.PERSONAS[persona_type]
         self.on_retry = on_retry
         
-        self.api_keys = api_keys or ([api_key] if api_key else config.API_KEYS)
-        self.llm = LLMClient(api_keys=self.api_keys)
-        self.current_key_index = start_key_index
-        self._init_client()
-
-    def _init_client(self):
-        """select the current key and model."""
-        self.api_key = self.api_keys[self.current_key_index % len(self.api_keys)]
-        self.model = self.llm.model_for_index(self.current_key_index)
+        # Use multi-provider client
+        self.llm = create_mixed_provider_client()
+        self.provider_index = start_key_index
+        self.current_provider = self.llm.providers[self.provider_index % len(self.llm.providers)]
 
     def _rotate_key(self):
-        """switch to the next available key in the pool."""
-        self.current_key_index += 1
-        self._init_client()
-        print(f"    [failover] {self.name} rotating to key #{self.current_key_index % len(self.api_keys) + 1}")
+        """switch to the next available provider."""
+        self.provider_index += 1
+        self.current_provider = self.llm.providers[self.provider_index % len(self.llm.providers)]
+        provider_type = self.current_provider["provider"]
+        model = self.current_provider["model"]
+        print(f"    [failover] {self.name} rotating to {provider_type} ({model})")
 
     def _build_prompt(self, question: str, context: str = "", peer_opinions: list = None) -> str:
         """build the user prompt from question, context, and peer opinions."""
@@ -88,10 +85,13 @@ class Agent:
         lower_error = error_text.lower()
 
         if "429" in error_text or "resource_exhausted" in lower_error or "quota" in lower_error:
-            return "NVIDIA API quota or rate limit was exhausted for the configured key pool. Deliberation could not complete until quota resets or fresh keys are provided."
+            provider = self.current_provider["provider"]
+            return f"{provider.upper()} API quota or rate limit was exhausted for the configured key pool. Deliberation could not complete until quota resets or fresh keys are provided."
 
         if "not_found" in lower_error or "404" in error_text:
-            return f"NVIDIA model '{self.model}' is not available for the configured API key."
+            model = self.current_provider["model"]
+            provider = self.current_provider["provider"]
+            return f"{provider.upper()} model '{model}' is not available for the configured API key."
 
         return error_text[:500]
 
@@ -107,11 +107,11 @@ class Agent:
             try:
                 response = await asyncio.wait_for(
                     self.llm.generate(
-                        api_key=self.api_key,
-                        model=self.model,
+                        provider_index=self.provider_index,
                         system_prompt=self.system_prompt,
                         user_prompt=user_content,
                         temperature=0.7,
+                        max_tokens=4096,
                     ),
                     timeout=60.0
                 )
@@ -122,14 +122,14 @@ class Agent:
                 is_retryable = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "timeout" in error_str or "timed out" in error_str
 
                 if is_retryable:
-                    if attempt < len(self.api_keys):
+                    if attempt < len(self.llm.providers):
                         self._rotate_key()
                         if self.on_retry:
                             self.on_retry(self.name, attempt + 1, 0)
                         continue 
                     
                     if attempt < MAX_RETRIES - 1:
-                        delay = BASE_RETRY_DELAY * (2 ** (attempt - len(self.api_keys) + 1))
+                        delay = BASE_RETRY_DELAY * (2 ** (attempt - len(self.llm.providers) + 1))
                         print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{MAX_RETRIES})...")
                         
                         if self.on_retry:
@@ -139,11 +139,13 @@ class Agent:
                         continue
                     
                 # non-retryable or exhausted retries
-                masked_key = f"...{self.api_keys[self.current_key_index % len(self.api_keys)][-4:]}"
+                provider = self.current_provider["provider"]
+                key = self.current_provider["api_key"]
+                masked_key = f"...{key[-4:]}"
                 return {
                     "answer": "API Error",
                     "confidence": 0.0,
-                    "reasoning": f"Failed using key {masked_key}. {self._format_api_error(e)}"
+                    "reasoning": f"Failed using {provider} key {masked_key}. {self._format_api_error(e)}"
                 }
 
     def generate_response_sync(self, question: str, context: str = "", peer_opinions: list = None) -> dict:
