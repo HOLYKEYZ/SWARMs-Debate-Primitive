@@ -109,6 +109,16 @@ class Session:
         self.event_queue.put_nowait(event)
 
     def to_dict(self):
+        # expose rounds so the frontend can rehydrate completed sessions.
+        # vote sessions are normalized into a single round with index 0.
+        normalized_rounds = None
+        synthesis_report = None
+        if self.session_data:
+            if self.session_data.get("rounds"):
+                normalized_rounds = self.session_data["rounds"]
+            elif self.session_data.get("responses"):
+                normalized_rounds = [{"round": 0, "responses": self.session_data["responses"]}]
+            synthesis_report = self.session_data.get("synthesis_report")
         return {
             "session_id": self.session_id,
             "question": self.question,
@@ -116,6 +126,8 @@ class Session:
             "mechanism": self.mechanism,
             "selector_result": self.selector_result,
             "transcript_hash": self.transcript_data["hash"] if self.transcript_data else None,
+            "transcript_data": {"rounds": normalized_rounds} if normalized_rounds else None,
+            "synthesis_report": synthesis_report,
             "chain_signature": self.chain_signature,
             "chain_verified": self.chain_verified,
             "created_at": self.created_at,
@@ -299,12 +311,12 @@ class SessionManager:
                         "explorer_url": f"https://explorer.solana.com/tx/{signature}?cluster=devnet",
                     })
                     
-                    final_round = getattr(session_data, "get", lambda x: None)("rounds", [])
-                    if final_round:
-                        for resp in final_round[-1].get("responses", []):
+                    rounds_data = session_data.get("rounds", [])
+                    if rounds_data:
+                        from agents.reputation import compute_reputation_delta, get_agent_id
+                        for resp in rounds_data[-1].get("responses", []):
                             ans = resp.get("response", {}).get("answer", "")
                             conf = resp.get("response", {}).get("confidence", 0.0)
-                            from agents.reputation import compute_reputation_delta, get_agent_id
                             agent_id = get_agent_id(resp.get("persona", ""))
                             delta = compute_reputation_delta(ans, final_answer, conf, quorum)
                             if agent_id:

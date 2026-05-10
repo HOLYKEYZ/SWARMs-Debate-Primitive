@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 
 interface Session {
@@ -11,6 +11,8 @@ interface Session {
   mechanism: string;
   created_at: string;
   final_answer?: string;
+  confidence_score?: number | null;
+  quorum_reached?: boolean | null;
 }
 
 interface AnalyticsData {
@@ -30,25 +32,33 @@ export default function AnalyticsDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sessionsRes] = await Promise.all([
-          fetch(apiUrl('/api/sessions')),
-        ]);
-        
-        const sessionsData = await sessionsRes.json();
+        const sessionsRes = await fetch(apiUrl('/api/sessions'));
+        const sessionsData: Session[] = await sessionsRes.json();
         setSessions(sessionsData);
 
-        // Calculate analytics
-        const completed = sessionsData.filter((s: Session) => s.status === 'complete').length;
-        const debates = sessionsData.filter((s: Session) => s.mechanism === 'debate').length;
-        const votes = sessionsData.filter((s: Session) => s.mechanism === 'vote').length;
-        
+        const completedSessions = sessionsData.filter((s) => s.status === 'complete');
+        const debates = sessionsData.filter((s) => s.mechanism === 'debate').length;
+        const votes = sessionsData.filter((s) => s.mechanism === 'vote').length;
+
+        const confidenceValues = completedSessions
+          .map((s) => s.confidence_score)
+          .filter((c): c is number => typeof c === 'number');
+        const avgConfidence = confidenceValues.length > 0
+          ? confidenceValues.reduce((sum, c) => sum + c, 0) / confidenceValues.length
+          : 0;
+
+        const quorumReachedCount = completedSessions.filter((s) => s.quorum_reached === true).length;
+        const quorumRate = completedSessions.length > 0
+          ? quorumReachedCount / completedSessions.length
+          : 0;
+
         setAnalytics({
           total_sessions: sessionsData.length,
-          completed_sessions: completed,
+          completed_sessions: completedSessions.length,
           debate_count: debates,
           vote_count: votes,
-          avg_confidence: 0, // Start at 0, calculate from actual session data
-          quorum_rate: completed / sessionsData.length || 0,
+          avg_confidence: avgConfidence,
+          quorum_rate: quorumRate,
         });
       } catch (error) {
         console.error('Failed to fetch analytics:', error);

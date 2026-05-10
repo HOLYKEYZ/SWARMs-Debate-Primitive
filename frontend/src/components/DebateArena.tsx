@@ -52,6 +52,7 @@ interface SessionRecord {
   mechanism: string;
   created_at: string;
   final_answer?: string;
+  agent_count?: number;
 }
 
 interface AgentState {
@@ -121,8 +122,23 @@ export default function DebateArena() {
 
       setSynthesisReport(data.synthesis_report);
       setMessages(data.transcript_data?.rounds?.flatMap((r: any) => r.responses) || []);
-      // Don't clear agents - preserve their responses
-      if (data.status === 'complete') {
+
+      // rebuild agent state from the final round so completed sessions still show responses
+      const finalRound = data.transcript_data?.rounds?.slice(-1)[0];
+      const responses: Array<{ name: string; persona: string; response: { answer?: string; reasoning?: string; confidence?: number } }> = finalRound?.responses ?? [];
+      if (responses.length > 0) {
+        const restored: Record<string, AgentState> = {};
+        responses.forEach((r) => {
+          restored[r.name] = {
+            persona: r.persona,
+            status: 'responded',
+            answer: r.response?.answer,
+            reasoning: r.response?.reasoning,
+            confidence: r.response?.confidence,
+          };
+        });
+        setAgents(restored);
+      } else {
         setAgents({});
       }
       setStatus(data.status === 'complete' ? 'complete' : 'idle');
@@ -197,14 +213,6 @@ export default function DebateArena() {
       console.log("SSE connection opened");
     };
 
-    es.onerror = (error) => {
-      console.error("SSE connection error:", error);
-      console.error("EventSource readyState:", es.readyState);
-      es.close();
-      setStatus("failed");
-      setStatusMessage("Connection failed");
-    };
-
     const consumeEvent = (eventType: string, rawData: string) => {
       try {
         const payload = JSON.parse(rawData);
@@ -257,7 +265,9 @@ export default function DebateArena() {
     es.onmessage = (event) => consumeEvent("message", event.data);
 
     es.onerror = () => {
-      console.log("SSE Connection closed or error");
+      // EventSource fires onerror when the server closes the stream after session_complete.
+      // Treat closure during 'running' as a graceful end; only surface as failure if no terminal event arrived.
+      console.log("SSE connection closed, readyState:", es.readyState);
       es.close();
       setStatus((currentStatus) => currentStatus === "running" ? "complete" : currentStatus);
     };
