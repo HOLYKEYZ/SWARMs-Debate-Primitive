@@ -1,8 +1,0 @@
-  [manager] loaded 7 sessions from database.
-INFO:     127.0.0.1:61237 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57812 - "GET /api/sessions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58943 - "GET /api/sessions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56515 - "GET /api/sessions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56515 - "GET /api/sessions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56515 - "GET /api/agents HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50782 - "GET /api/sessions HTTP/1.1" 200 OK
