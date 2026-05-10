@@ -33,19 +33,11 @@ for i in range(1, 10):
         API_KEYS.append(key)
         API_MODELS.append(model or os.getenv("API_MODEL", "meta/llama-3.1-70b-instruct"))
 
-GEMINI_API_KEYS = []
-for i in range(1, 10):
-    key_name = "GEMINI_API_KEY" if i == 1 else f"GEMINI_API_KEY{i}"
-    k = os.getenv(key_name, "")
-    if k:
-        GEMINI_API_KEYS.append(k)
-
-# Solana configuration
+# solana configuration
 SOLANA_RPC_URL = "https://api.devnet.solana.com"
 WALLET_PATH = "wallet.json"
 
-# SWARM Coordination configuration
+# swarm coordination configuration
 NUM_AGENTS = 4
 DEBATE_ROUNDS = 3
-MODEL = os.getenv("MODEL", "gemini-2.0-flash")
 QUORUM_THRESHOLD = 0.75

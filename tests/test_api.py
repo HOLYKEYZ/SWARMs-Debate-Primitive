@@ -10,21 +10,26 @@ class TestAPI(unittest.TestCase):
         self.client = TestClient(app)
     
     def test_health_endpoint(self):
-        """Test health check endpoint."""
+        """health check endpoint must respond 200 with a status field."""
         response = self.client.get("/api/health")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["status"], "ok")
+        # status is "ok" only when db is reachable AND api keys are configured.
+        # in ci/tests without API_KEYS, "degraded" is the correct value.
+        self.assertIn(data["status"], ["ok", "degraded"])
         self.assertIn("service", data)
         self.assertIn("version", data)
-    
+
     def test_health_endpoint_detailed(self):
-        """Test health endpoint returns detailed information."""
+        """health endpoint must report real database state and key/session counts."""
         response = self.client.get("/api/health")
         data = response.json()
         self.assertIn("database", data)
-        self.assertIn("llm_provider", data)
-        self.assertIn("agents_online", data)
+        self.assertIn(data["database"], ["connected", "unavailable"])
+        self.assertIn("api_keys_configured", data)
+        self.assertIsInstance(data["api_keys_configured"], int)
+        self.assertIn("active_sessions", data)
+        self.assertIsInstance(data["active_sessions"], int)
     
     def test_submit_session_invalid_question(self):
         """Test session submission with invalid question."""

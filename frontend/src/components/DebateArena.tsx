@@ -65,6 +65,21 @@ interface AgentState {
   retryMessage?: string;
 }
 
+interface TranscriptResponse {
+  name: string;
+  persona: string;
+  response: {
+    answer?: string;
+    reasoning?: string;
+    confidence?: number;
+  };
+}
+
+interface TranscriptRound {
+  round: number;
+  responses: TranscriptResponse[];
+}
+
 export default function DebateArena() {
   const [question, setQuestion] = useState("");
   const [rounds, setRounds] = useState<number>(3);
@@ -121,11 +136,14 @@ export default function DebateArena() {
       } : null);
 
       setSynthesisReport(data.synthesis_report);
-      setMessages(data.transcript_data?.rounds?.flatMap((r: any) => r.responses) || []);
+
+      // messages stream from sse is empty for replayed sessions; transcript_hash is read directly from `data` instead.
+      setMessages([]);
 
       // rebuild agent state from the final round so completed sessions still show responses
-      const finalRound = data.transcript_data?.rounds?.slice(-1)[0];
-      const responses: Array<{ name: string; persona: string; response: { answer?: string; reasoning?: string; confidence?: number } }> = finalRound?.responses ?? [];
+      const transcriptRounds: TranscriptRound[] = data.transcript_data?.rounds ?? [];
+      const finalRound = transcriptRounds.length > 0 ? transcriptRounds[transcriptRounds.length - 1] : undefined;
+      const responses: TranscriptResponse[] = finalRound?.responses ?? [];
       if (responses.length > 0) {
         const restored: Record<string, AgentState> = {};
         responses.forEach((r) => {
@@ -201,7 +219,97 @@ export default function DebateArena() {
     }
   };
 
-  const connectSSE = (id: string) => {
+  const handleEvent = useCallback((eventType: string, data: Record<string, unknown>) => {
+    const agentName = typeof data.agent === "string" ? data.agent : null;
+
+    if (eventType === "selector_decision") {
+      setSelectorResult({
+        mechanism: typeof data.mechanism === "string" ? data.mechanism : undefined,
+        reasoning: typeof data.reasoning === "string" ? data.reasoning : undefined,
+        confidence: typeof data.confidence === "number" ? data.confidence : undefined,
+        source: typeof data.source === "string" ? data.source : undefined,
+      });
+    }
+
+    if (eventType === "status" && typeof data.status === "string") {
+      setStatus(data.status);
+      setStatusMessage(typeof data.message === "string" ? data.message : data.status);
+    }
+
+    if (eventType === "round_start" && typeof data.round === "number") {
+      setCurrentRound(data.round);
+    }
+
+    if (eventType === "debate_start" || eventType === "vote_start") {
+      const initialAgents: Record<string, AgentState> = {};
+      (data.agents as Array<{ name: string; persona: string }>).forEach((a) => {
+        initialAgents[a.name] = {
+          persona: a.persona,
+          status: 'idle'
+        };
+      });
+      setAgents(initialAgents);
+    }
+
+    if (eventType === "agent_thinking" && agentName) {
+      setAgents(prev => ({
+        ...prev,
+        [agentName]: { ...prev[agentName], status: 'thinking', positionChanged: false }
+      }));
+    }
+
+    if (eventType === "agent_response" && agentName) {
+      setAgents(prev => ({
+        ...prev,
+        [agentName]: {
+          ...prev[agentName],
+          status: 'responded',
+          answer: typeof data.answer === "string" ? data.answer : undefined,
+          reasoning: typeof data.reasoning === "string" ? data.reasoning : undefined,
+          confidence: typeof data.confidence === "number" ? data.confidence : undefined,
+          positionChanged: Boolean(data.position_changed),
+          retryMessage: undefined
+        }
+      }));
+    }
+
+    if (eventType === "agent_retry" && agentName) {
+      setAgents(prev => ({
+        ...prev,
+        [agentName]: {
+          ...prev[agentName],
+          status: 'thinking',
+          retryMessage: typeof data.message === "string" ? data.message : undefined
+        }
+      }));
+    }
+
+    if (eventType === "quorum_result") {
+      setQuorumResult({
+        ...data,
+        confidence_score: typeof data.confidence_score === "number" ? data.confidence_score : 0,
+        final_answer: typeof data.final_answer === "string" ? data.final_answer : undefined,
+        quorum_reached: typeof data.quorum_reached === "boolean" ? data.quorum_reached : undefined,
+      });
+    }
+
+    if (eventType === "chain_receipt") {
+      if (typeof data.signature === "string" && typeof data.explorer_url === "string") {
+        setChainReceipt({ signature: data.signature, explorer_url: data.explorer_url });
+      }
+    }
+
+    if (eventType === "synthesis_report") {
+      setSynthesisReport({
+        summary: typeof data.summary === "string" ? data.summary : "",
+        agreement: Array.isArray(data.agreement) ? data.agreement.filter((item): item is string => typeof item === "string") : [],
+        disagreement: Array.isArray(data.disagreement) ? data.disagreement.filter((item): item is string => typeof item === "string") : [],
+        synthesis: typeof data.synthesis === "string" ? data.synthesis : "",
+      });
+    }
+  }, []);
+
+  const connectSSE = useCallback((id: string) => {
     setStatus("running");
     setActiveSessionId(id);
     const streamUrl = apiUrl(`/api/session/${id}/stream`);
@@ -226,17 +334,17 @@ export default function DebateArena() {
         };
 
         setMessages((prev) => [...prev, normalizedPayload]);
-          handleEvent(normalizedPayload.event, normalizedPayload.data);
+        handleEvent(normalizedPayload.event, normalizedPayload.data);
 
-          if (normalizedPayload.event === "session_complete" || normalizedPayload.event === "error") {
-            es.close();
-            setStatus(normalizedPayload.event === "error" ? "failed" : "complete");
-            fetchHistory();
-          }
-        } catch (e) {
-          console.error("Error parsing SSE data", e);
+        if (normalizedPayload.event === "session_complete" || normalizedPayload.event === "error") {
+          es.close();
+          setStatus(normalizedPayload.event === "error" ? "failed" : "complete");
+          fetchHistory();
         }
-      };
+      } catch (e) {
+        console.error("Error parsing SSE data", e);
+      }
+    };
 
     const eventTypes = [
       "status",
@@ -271,9 +379,9 @@ export default function DebateArena() {
       es.close();
       setStatus((currentStatus) => currentStatus === "running" ? "complete" : currentStatus);
     };
-  };
+  }, [handleEvent, fetchHistory]);
 
-  // Reconnect to SSE when tab becomes visible
+  // reconnect to SSE when tab becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && activeSessionId && status === 'running') {
@@ -281,9 +389,9 @@ export default function DebateArena() {
         if (eventSourceRef.current) {
           eventSourceRef.current.close();
         }
-        // Fetch current session state to catch up
+        // fetch current session state to catch up
         loadSession(activeSessionId);
-        // Reconnect to SSE for live updates
+        // reconnect to SSE for live updates
         connectSSE(activeSessionId);
       }
     };
@@ -292,97 +400,7 @@ export default function DebateArena() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeSessionId, status, loadSession]);
-
-  const handleEvent = (eventType: string, data: Record<string, unknown>) => {
-    const agentName = typeof data.agent === "string" ? data.agent : null;
-
-    if (eventType === "selector_decision") {
-      setSelectorResult({
-        mechanism: typeof data.mechanism === "string" ? data.mechanism : undefined,
-        reasoning: typeof data.reasoning === "string" ? data.reasoning : undefined,
-        confidence: typeof data.confidence === "number" ? data.confidence : undefined,
-        source: typeof data.source === "string" ? data.source : undefined,
-      });
-    }
-
-    if (eventType === "status" && typeof data.status === "string") {
-      setStatus(data.status);
-      setStatusMessage(typeof data.message === "string" ? data.message : data.status);
-    }
-
-    if (eventType === "round_start" && typeof data.round === "number") {
-      setCurrentRound(data.round);
-    }
-    
-    if (eventType === "debate_start" || eventType === "vote_start") {
-       const initialAgents: Record<string, AgentState> = {};
-       (data.agents as Array<{ name: string; persona: string }>).forEach((a) => {
-           initialAgents[a.name] = {
-               persona: a.persona,
-               status: 'idle'
-           };
-       });
-       setAgents(initialAgents);
-    }
-
-    if (eventType === "agent_thinking" && agentName) {
-       setAgents(prev => ({
-           ...prev,
-           [agentName]: { ...prev[agentName], status: 'thinking', positionChanged: false }
-       }));
-    }
-
-    if (eventType === "agent_response" && agentName) {
-       setAgents(prev => ({
-           ...prev,
-           [agentName]: { 
-               ...prev[agentName], 
-               status: 'responded',
-               answer: typeof data.answer === "string" ? data.answer : undefined,
-               reasoning: typeof data.reasoning === "string" ? data.reasoning : undefined,
-               confidence: typeof data.confidence === "number" ? data.confidence : undefined,
-               positionChanged: Boolean(data.position_changed),
-               retryMessage: undefined
-           }
-       }));
-    }
-
-    if (eventType === "agent_retry" && agentName) {
-       setAgents(prev => ({
-           ...prev,
-           [agentName]: { 
-               ...prev[agentName], 
-               status: 'thinking',
-               retryMessage: typeof data.message === "string" ? data.message : undefined
-           }
-       }));
-    }
-
-    if (eventType === "quorum_result") {
-       setQuorumResult({
-         ...data,
-         confidence_score: typeof data.confidence_score === "number" ? data.confidence_score : 0,
-         final_answer: typeof data.final_answer === "string" ? data.final_answer : undefined,
-         quorum_reached: typeof data.quorum_reached === "boolean" ? data.quorum_reached : undefined,
-       });
-    }
-
-    if (eventType === "chain_receipt") {
-       if (typeof data.signature === "string" && typeof data.explorer_url === "string") {
-         setChainReceipt({ signature: data.signature, explorer_url: data.explorer_url });
-       }
-    }
-
-    if (eventType === "synthesis_report") {
-       setSynthesisReport({
-         summary: typeof data.summary === "string" ? data.summary : "",
-         agreement: Array.isArray(data.agreement) ? data.agreement.filter((item): item is string => typeof item === "string") : [],
-         disagreement: Array.isArray(data.disagreement) ? data.disagreement.filter((item): item is string => typeof item === "string") : [],
-         synthesis: typeof data.synthesis === "string" ? data.synthesis : "",
-       });
-    }
-  };
+  }, [activeSessionId, status, loadSession, connectSSE]);
 
   const isIdle = status === "idle";
   const isRunning = ["submitting", "selecting", "running", "synthesizing", "hashing", "chain"].includes(status);
