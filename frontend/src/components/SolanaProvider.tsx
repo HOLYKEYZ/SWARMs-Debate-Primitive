@@ -2,10 +2,13 @@
 
 import React, { useMemo } from 'react';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { clusterApiUrl } from '@solana/web3.js';
 
+// Import wallet adapter CSS
+import '@solana/wallet-adapter-react-ui/styles.css';
 
 export default function SolanaProvider({ children }: { children: React.ReactNode }) {
     // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
@@ -25,7 +28,9 @@ export default function SolanaProvider({ children }: { children: React.ReactNode
     return (
         <ConnectionProvider endpoint={endpoint}>
             <WalletProvider wallets={wallets} autoConnect>
-                {children}
+                <WalletModalProvider>
+                    {children}
+                </WalletModalProvider>
             </WalletProvider>
         </ConnectionProvider>
     );

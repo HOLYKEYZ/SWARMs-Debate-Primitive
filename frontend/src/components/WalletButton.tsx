@@ -1,22 +1,15 @@
 "use client";
 
 import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Wallet } from 'lucide-react';
 
 export default function WalletButton() {
-  const { publicKey, connect, disconnect, select, wallet } = useWallet();
+  const { publicKey, disconnect } = useWallet();
+  const { setVisible } = useWalletModal();
 
-  const handleConnect = async () => {
-    try {
-      if (wallet) {
-        await select(wallet.adapter.name);
-        await connect();
-      } else {
-        console.error('No wallet available');
-      }
-    } catch (error) {
-      console.error('Wallet connection error:', error);
-    }
+  const handleConnect = () => {
+    setVisible(true);
   };
 
   const handleDisconnect = async () => {

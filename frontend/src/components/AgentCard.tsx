@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Brain, User, RefreshCw } from 'lucide-react';
+import { Brain, User, RefreshCw, Maximize2 } from 'lucide-react';
+import AgentResponseModal from './AgentResponseModal';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,6 +18,7 @@ interface AgentCardProps {
   confidence?: number;
   positionChanged?: boolean;
   retryMessage?: string;
+  onExpand?: () => void;
 }
 
 const personaColors: Record<string, string> = {
@@ -35,10 +37,17 @@ export default function AgentCard({
   reasoning, 
   confidence, 
   positionChanged,
-  retryMessage 
+  retryMessage,
+  onExpand
 }: AgentCardProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
+  
+  const handleExpand = () => {
+    setIsModalOpen(true);
+    if (onExpand) onExpand();
+  };
   
   return (
     <div className={cn(
@@ -97,18 +106,27 @@ export default function AgentCard({
 
         {(status === 'responded' || answer) && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="bg-black/40 rounded-xl p-4 border border-white/5">
-              <div className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-2 flex justify-between">
+            <div className="bg-black/40 rounded-xl p-4 border border-white/5 relative">
+              <div className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-2 flex justify-between items-center">
                 <span>Position</span>
-                {confidence !== undefined && confidence !== null && (
-                  <span className="text-white/60">{Math.round(confidence * 100)}% Conf</span>
-                )}
+                <div className="flex items-center gap-3">
+                  {confidence !== undefined && confidence !== null && confidence >= 0 && (
+                    <span className="text-white/60">{Math.round(confidence * 100)}% Conf</span>
+                  )}
+                  <button
+                    onClick={handleExpand}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors group"
+                    title="Expand response"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5 text-white/40 group-hover:text-white/80" />
+                  </button>
+                </div>
               </div>
-              <div className="text-lg font-bold text-white break-words leading-snug">{answer || 'N/A'}</div>
+              <div className="text-lg font-bold text-white break-words leading-snug line-clamp-3">{answer || 'N/A'}</div>
             </div>
             
             {reasoning && (
-              <div className="text-base text-white/75 leading-8 border-l-2 border-white/10 pl-4 whitespace-pre-wrap break-words">
+              <div className="text-base text-white/75 leading-7 border-l-2 border-white/10 pl-4 whitespace-pre-wrap break-words line-clamp-4">
                 {reasoning}
               </div>
             )}
@@ -116,6 +134,15 @@ export default function AgentCard({
         )}
       </div>
 
+      <AgentResponseModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        name={name}
+        persona={persona}
+        answer={answer}
+        reasoning={reasoning}
+        confidence={confidence}
+      />
     </div>
   );
 }
