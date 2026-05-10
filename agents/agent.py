@@ -16,7 +16,7 @@ class Agent:
         "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing. You should remain cautious until at least round 2."
     }
 
-    def __init__(self, name: str, persona_type: str, api_keys: list[str] = None, api_key: str = None, on_retry: callable = None):
+    def __init__(self, name: str, persona_type: str, api_keys: list[str] = None, api_key: str = None, on_retry: callable = None, start_key_index: int = 0):
         if persona_type not in self.PERSONAS:
             raise ValueError(f"Unknown persona type: {persona_type}")
         self.name = name
@@ -26,7 +26,7 @@ class Agent:
         
         self.api_keys = api_keys or ([api_key] if api_key else config.API_KEYS)
         self.llm = LLMClient(api_keys=self.api_keys)
-        self.current_key_index = 0
+        self.current_key_index = start_key_index
         self._init_client()
 
     def _init_client(self):
@@ -119,7 +119,7 @@ class Agent:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = "429" in error_str or "resource" in error_str or "rate" in error_str or "quota" in error_str or "timeout" in error_str
+                is_retryable = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "timeout" in error_str or "timed out" in error_str
 
                 if is_retryable:
                     if attempt < len(self.api_keys):
