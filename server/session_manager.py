@@ -386,7 +386,7 @@ class SessionManager:
             for agent in agents:
                 peer_opinions = [
                     resp for resp in previous_responses
-                    if resp["name"] != agent.name
+                    if resp["name"] != agent.name and _is_valid_agent_response(resp.get("response", {}))
                 ]
                 session.emit("agent_thinking", {
                     "agent": agent.name, "persona": agent.persona_type,
@@ -394,6 +394,17 @@ class SessionManager:
                 })
 
                 result = await agent.generate_response(question, "", peer_opinions)
+                previous_self_response = None
+                for prev_resp in previous_responses:
+                    if prev_resp["name"] == agent.name:
+                        previous_self_response = prev_resp
+                        break
+
+                preserved_previous = False
+                if not _is_valid_agent_response(result) and previous_self_response and _is_valid_agent_response(previous_self_response.get("response", {})):
+                    result = previous_self_response["response"]
+                    preserved_previous = True
+
                 new_round_responses.append({
                     "name": agent.name,
                     "persona": agent.persona_type,
@@ -401,13 +412,9 @@ class SessionManager:
                 })
 
                 # track position changes
-                prev_answer = None
-                for prev_resp in previous_responses:
-                    if prev_resp["name"] == agent.name:
-                        prev_answer = prev_resp["response"].get("answer", "").strip().lower()
-                        break
+                prev_answer = previous_self_response["response"].get("answer", "").strip().lower() if previous_self_response else None
                 new_answer = result.get("answer", "").strip().lower()
-                changed = prev_answer and new_answer and prev_answer != new_answer
+                changed = bool(prev_answer and new_answer and prev_answer != new_answer and not preserved_previous)
 
                 if changed:
                     position_changes.append({
@@ -426,6 +433,7 @@ class SessionManager:
                     "reasoning": result.get("reasoning", ""),
                     "position_changed": changed,
                     "old_answer": prev_answer if changed else None,
+                    "preserved_previous": preserved_previous,
                 })
                 await asyncio.sleep(2)
 
@@ -507,11 +515,12 @@ class SessionManager:
         personas = list(Agent.PERSONAS.keys())
         
         def on_agent_retry(name, attempt, delay):
+            wait_message = "Trying another configured API key..." if delay == 0 else f"Waiting {delay}s before retry..."
             session.emit("agent_retry", {
                 "agent": name,
                 "attempt": attempt,
                 "delay": delay,
-                "message": f"Rate limit hit. Retrying in {delay}s..."
+                "message": wait_message
             })
 
         agents = []
@@ -521,6 +530,7 @@ class SessionManager:
                 name=f"Agent_{i+1}_{p_type}", 
                 persona_type=p_type, 
                 api_keys=keys,
-                on_retry=on_agent_retry
+                on_retry=on_agent_retry,
+                start_key_index=i
             ))
         return agents
