@@ -27,11 +27,13 @@ API_MODELS = []
 for i in range(1, 10):
     key_name = "API_KEY" if i == 1 else f"API_KEY{i}"
     model_name = "API_MODEL" if i == 1 else f"API_MODEL{i}"
-    key = os.getenv(key_name, "")
-    model = os.getenv(model_name, "")
+    nvidia_key_name = "NVIDIA_API_KEY" if i == 1 else f"NVIDIA_API_KEY{i}"
+    nvidia_model_name = "NVIDIA_MODEL" if i == 1 else f"NVIDIA_MODEL{i}"
+    key = os.getenv(key_name, "") or os.getenv(nvidia_key_name, "")
+    model = os.getenv(model_name, "") or os.getenv(nvidia_model_name, "")
     if key:
         API_KEYS.append(key)
-        API_MODELS.append(model or os.getenv("API_MODEL", "meta/llama-3.1-70b-instruct"))
+        API_MODELS.append(model or os.getenv("API_MODEL", "") or os.getenv("NVIDIA_MODEL", "meta/llama-3.1-70b-instruct"))
 
 # solana configuration
 SOLANA_RPC_URL = "https://api.devnet.solana.com"
