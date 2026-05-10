@@ -1,4 +1,5 @@
 import os
+import base64
 
 try:
     from dotenv import load_dotenv
@@ -16,6 +17,17 @@ except ModuleNotFoundError:
 
 # Load environment variables from .env file if it exists
 load_dotenv()
+
+# Handle Railway wallet deployment (base64 encoded)
+WALLET_PATH = "wallet.json"
+wallet_b64 = os.getenv("WALLET_JSON_BASE64")
+if wallet_b64 and not os.path.exists(WALLET_PATH):
+    try:
+        with open(WALLET_PATH, "wb") as f:
+            f.write(base64.b64decode(wallet_b64))
+        print(f"✅ Wallet decoded from WALLET_JSON_BASE64")
+    except Exception as e:
+        print(f"⚠️  Failed to decode wallet: {e}")
 
 # api keys (support multiple for rotation/rate limit bypass)
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "nvidia").lower()
