@@ -587,7 +587,7 @@ class SessionManager:
         personas = list(Agent.PERSONAS.keys())
         
         def on_agent_retry(name, attempt, delay):
-            wait_message = "Trying another configured API key..." if delay == 0 else f"Waiting {delay}s before retry..."
+            wait_message = "Trying another configured provider..." if delay == 0 else f"Waiting {delay}s before retry..."
             session.emit("agent_retry", {
                 "agent": name,
                 "attempt": attempt,
