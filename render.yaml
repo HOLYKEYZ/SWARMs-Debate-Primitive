@@ -2,5 +2,6 @@ services:
   - type: web
     name: swarms-backend
     env: python
+    runtime: python-3.11.9
     buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn server.api:app --host 0.0.0.0 --port $PORT
