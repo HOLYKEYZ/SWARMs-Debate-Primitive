@@ -494,7 +494,8 @@ export default function DebateArena() {
   // reconnect to SSE when tab becomes visible (only for running sessions)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && activeSessionId && isRunning) {
+      const isSessionRunning = ["submitting", "selecting", "running", "synthesizing", "hashing", "chain"].includes(status);
+      if (document.visibilityState === 'visible' && activeSessionId && isSessionRunning) {
         console.log("Tab became visible, checking SSE connection");
         if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
           console.log("SSE already connected, skipping reconnect");
@@ -510,7 +511,7 @@ export default function DebateArena() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeSessionId, connectSSE, isRunning]);
+  }, [activeSessionId, connectSSE, status]);
 
   const isIdle = status === "idle";
   const isRunning = ["submitting", "selecting", "running", "synthesizing", "hashing", "chain"].includes(status);
