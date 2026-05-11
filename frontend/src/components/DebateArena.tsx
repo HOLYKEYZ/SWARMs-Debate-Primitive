@@ -123,10 +123,7 @@ export default function DebateArena() {
 
   const toggleExpanded = (name: string) => {
     setExpandedAgents((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
+      return prev.has(name) ? new Set() : new Set([name]);
     });
     setSelectedAgentName(name);
   };
