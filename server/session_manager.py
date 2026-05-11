@@ -343,7 +343,7 @@ class SessionManager:
                 "session_id": transcript_data["session_id"],
             })
 
-            if True:
+            if transcript_data.get("hash"):
                 session.status = "chain"
                 session.emit("status", {"status": "chain", "message": "Writing to Solana Devnet..."})
 

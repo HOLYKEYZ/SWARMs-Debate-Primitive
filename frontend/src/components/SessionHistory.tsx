@@ -32,7 +32,7 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto pr-3 custom-scrollbar relative z-10">
+      <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar relative z-10">
         {sessions.length === 0 && (
           <div className="p-10 border border-dashed border-white/5 rounded-3xl text-center flex flex-col items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
@@ -65,9 +65,9 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]" />
               )}
 
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-full border ${
+              <div className="flex min-w-0 justify-between items-center gap-3 mb-4">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={`max-w-24 truncate text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-full border ${
                     mechanism === 'debate' ? 'text-purple-400 border-purple-500/20 bg-purple-500/5' :
                     mechanism === 'vote' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' :
                     'text-gray-400 border-gray-500/20 bg-gray-500/5'
@@ -92,13 +92,13 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
               </p>
 
               <div className="flex items-center justify-between mt-auto">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="flex -space-x-1.5">
                      {Array.from({ length: dotCount }).map((_, i) => (
                        <div key={i} className="w-4 h-4 rounded-full border border-black bg-white/5" />
                      ))}
                   </div>
-                  <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">{agentCount} Agents</span>
+                  <span className="truncate text-[9px] font-black text-white/20 uppercase tracking-widest">{agentCount} Agents</span>
                 </div>
                 <ChevronRight className={`w-3.5 h-3.5 text-blue-500 transition-all duration-500 ${activeId === s.session_id ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0'}`} />
               </div>
