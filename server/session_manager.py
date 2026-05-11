@@ -607,6 +607,6 @@ class SessionManager:
                 persona_type=p_type, 
                 api_keys=keys,
                 on_retry=on_agent_retry,
-                start_key_index=i
+                start_key_index=0
             ))
         return agents
