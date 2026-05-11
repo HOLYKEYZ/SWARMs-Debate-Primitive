@@ -9,7 +9,8 @@ import LivePipeline from './LivePipeline';
 import SessionHistory from './SessionHistory';
 import ConsensusReport from './ConsensusReport';
 import DebateGraph from './DebateGraph';
-import { Send, Loader2, Play, Gauge, Users, Radio } from 'lucide-react';
+import AgentResponseTheater from './AgentResponseTheater';
+import { Send, Loader2, Play, Gauge, Users, Radio, Coins, ShieldAlert, Vote } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 
 interface EventData {
@@ -82,6 +83,7 @@ interface TranscriptRound {
 
 export default function DebateArena() {
   const [question, setQuestion] = useState("");
+  const [mode, setMode] = useState<"general" | "dao" | "audit" | "bounty">("general");
   const [rounds, setRounds] = useState<number>(3);
   const [quorumThreshold, setQuorumThreshold] = useState<number>(0.75);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -101,6 +103,7 @@ export default function DebateArena() {
   
   // agents state
   const [agents, setAgents] = useState<Record<string, AgentState>>({});
+  const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
 
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -159,6 +162,7 @@ export default function DebateArena() {
         setAgents(restored);
       } else {
         setAgents({});
+      setSelectedAgentName(null);
       }
       setStatus(data.status === 'complete' ? 'complete' : 'idle');
       setStatusMessage(data.status === 'complete' ? 'Session complete' : 'Session loaded');
@@ -250,9 +254,11 @@ export default function DebateArena() {
         };
       });
       setAgents(initialAgents);
+      setSelectedAgentName((data.agents as Array<{ name: string; persona: string }>)[0]?.name ?? null);
     }
 
     if (eventType === "agent_thinking" && agentName) {
+      setSelectedAgentName(agentName);
       setAgents(prev => ({
         ...prev,
         [agentName]: { ...prev[agentName], status: 'thinking', positionChanged: false }
@@ -260,6 +266,7 @@ export default function DebateArena() {
     }
 
     if (eventType === "agent_response" && agentName) {
+      setSelectedAgentName(agentName);
       setAgents(prev => ({
         ...prev,
         [agentName]: {
@@ -421,6 +428,33 @@ export default function DebateArena() {
         { name: "Agent_3_Advocate", persona: "Advocate", status: 'idle' as const },
         { name: "Agent_4_Skeptic", persona: "Skeptic", status: 'idle' as const },
       ];
+  const selectedAgent = renderedAgents.find((agent) => agent.name === selectedAgentName) ?? renderedAgents.find((agent) => agent.status === 'thinking') ?? renderedAgents.find((agent) => agent.answer) ?? renderedAgents[0];
+  const modeConfig = {
+    general: {
+      label: "Swarm",
+      title: "Deliberation Console",
+      placeholder: "e.g. Should we deploy this smart contract to mainnet?",
+      badge: "ai quorum primitive",
+    },
+    dao: {
+      label: "DAO",
+      title: "DAO Governance War Room",
+      placeholder: "Paste a DAO proposal, treasury action, or tokenholder vote...",
+      badge: "pre-vote proposal oracle",
+    },
+    audit: {
+      label: "Audit",
+      title: "Exploit Hunter Chamber",
+      placeholder: "Paste smart contract code or protocol design for adversarial swarm review...",
+      badge: "red-team security swarm",
+    },
+    bounty: {
+      label: "Bounty",
+      title: "Escrow-Backed Question Market",
+      placeholder: "Post a question with a devnet SOL bounty for quorum-backed resolution...",
+      badge: "bounty marketplace shell",
+    },
+  }[mode];
   const transcriptHash = messages.find((m) => m.event === 'transcript_hashed')?.data.hash;
 
   return (
@@ -442,7 +476,10 @@ export default function DebateArena() {
         <div className="flex flex-col gap-6 w-full">
            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
               <div className="min-w-0 flex-1">
-                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2 break-words">Deliberation Console</h1>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.25em] text-blue-200">
+                  <Vote className="h-3.5 w-3.5" /> {modeConfig.badge}
+                </div>
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2 break-words">{modeConfig.title}</h1>
                 <p className="text-sm text-white/40 font-medium break-words">{statusMessage}</p>
               </div>
               {isRunning && (
@@ -453,7 +490,7 @@ export default function DebateArena() {
               )}
            </div>
 
-           <div className="grid grid-cols-3 gap-3">
+           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
              <div className="glass-panel rounded-lg p-4 min-w-0">
                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
                  <Radio className="w-3 h-3 text-blue-400" /> status
@@ -472,6 +509,18 @@ export default function DebateArena() {
                </div>
                <div className="text-sm font-bold text-white break-words">{currentRound === null ? "standby" : `round ${currentRound}`}</div>
              </div>
+             <div className="glass-panel rounded-lg p-4 min-w-0">
+               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
+                 <Coins className="w-3 h-3 text-green-400" /> stake
+               </div>
+               <div className="text-sm font-bold text-white">0.20 SOL pooled</div>
+             </div>
+             <div className="glass-panel rounded-lg p-4 min-w-0">
+               <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
+                 <ShieldAlert className="w-3 h-3 text-purple-400" /> proof
+               </div>
+               <div className="text-sm font-bold text-white">memo verified</div>
+             </div>
            </div>
            
            {(status !== 'idle' || activeSessionId) && (
@@ -488,12 +537,37 @@ export default function DebateArena() {
         </h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
           <div className="flex flex-col gap-4 w-full">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {([
+                ["general", "General Swarm"],
+                ["dao", "DAO Governance"],
+                ["audit", "Exploit Hunt"],
+                ["bounty", "SOL Bounty"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value)}
+                  className={`rounded-xl border px-4 py-3 text-xs font-black uppercase tracking-widest transition-all ${mode === value ? 'border-blue-400/50 bg-blue-500/20 text-blue-100' : 'border-white/10 bg-black/20 text-white/35 hover:text-white/70'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {mode === "bounty" && (
+              <div className="rounded-2xl border border-green-400/20 bg-green-400/10 p-4">
+                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-green-200/80">bounty marketplace preview</div>
+                <p className="mt-2 text-sm leading-6 text-white/65">Connect Phantom, attach a devnet SOL bounty, and the escrow program can release after quorum once the deployed program id is configured.</p>
+              </div>
+            )}
+
             <textarea 
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               disabled={isRunning}
               rows={4}
-              placeholder="e.g. Should we deploy this smart contract to mainnet?"
+              placeholder={modeConfig.placeholder}
               className="w-full bg-black/40 border border-white/10 rounded-lg px-6 py-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-white/20 resize-y font-sans leading-relaxed overflow-y-auto custom-scrollbar"
               style={{ minHeight: '120px', maxHeight: '400px' }}
             />
@@ -570,14 +644,14 @@ export default function DebateArena() {
             <div className="flex flex-wrap gap-2 mt-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar w-full">
                <button 
                  type="button"
-                 onClick={() => setQuestion("AGI should be open-sourced immediately upon creation.")}
+                 onClick={() => { setMode("general"); setQuestion("AGI should be open-sourced immediately upon creation."); }}
                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: AGI Open Source Debate
                </button>
                <button 
                  type="button"
-                 onClick={() => setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // no owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities.")}
+                 onClick={() => { setMode("audit"); setQuestion("CODE AUDIT:\n\n```rust\n#[program]\npub mod vault {\n  pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {\n    // no owner check\n    **ctx.accounts.vault.try_borrow_mut_lamports()? -= amount;\n    **ctx.accounts.user.try_borrow_mut_lamports()? += amount;\n    Ok(())\n  }\n}\n```\n\nShould this smart contract be deployed to devnet? Identify any vulnerabilities, exploit paths, and mitigations."); }}
                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 border border-purple-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: Smart Contract Audit
@@ -605,7 +679,7 @@ export default function DebateArena() {
                </button>
                <button 
                  type="button"
-                 onClick={() => setQuestion("DAO GOVERNANCE PROPOSAL:\n\nProposal: Should our DAO allocate 50,000 tokens to fund a new DeFi protocol integration?\n\nArguments FOR:\n- Expands ecosystem utility\n- Potential revenue generation\n- Attracts new users\n\nArguments AGAINST:\n- High risk, unproven protocol\n- Dilutes treasury reserves\n- Better opportunities exist\n\nShould this proposal be approved?")}
+                 onClick={() => { setMode("dao"); setQuestion("DAO GOVERNANCE PROPOSAL:\n\nProposal: Should our DAO allocate 50,000 tokens to fund a new DeFi protocol integration?\n\nArguments FOR:\n- Expands ecosystem utility\n- Potential revenue generation\n- Attracts new users\n\nArguments AGAINST:\n- High risk, unproven protocol\n- Dilutes treasury reserves\n- Better opportunities exist\n\nBefore tokenholder voting opens, should this proposal be approved, rejected, or revised? Include treasury risk, governance attack surface, and safeguards."); }}
                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-colors whitespace-nowrap"
                >
                  Try Demo: DAO Governance
@@ -638,25 +712,42 @@ export default function DebateArena() {
              <div className="h-px flex-1 bg-white/5" />
           </div>
           
-          {/* Debate Graph Visualization */}
           <DebateGraph agents={agents} round={currentRound} />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            {renderedAgents.map((agent) => (
-              <div key={agent.name} className="min-w-0 h-full">
-                <AgentCard 
-                  name={agent.name}
-                  persona={showPersonas ? agent.persona : ''}
-                  status={agent.status}
-                  answer={agent.answer}
-                  reasoning={agent.reasoning}
-                  confidence={agent.confidence}
-                  isActive={agent.status === 'thinking'}
-                  positionChanged={agent.positionChanged}
-                  retryMessage={agent.retryMessage}
-                />
-              </div>
-            ))}
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6 w-full">
+            <AgentResponseTheater
+              name={selectedAgent?.name}
+              persona={showPersonas ? selectedAgent?.persona : ''}
+              status={selectedAgent?.status}
+              answer={selectedAgent?.answer}
+              reasoning={selectedAgent?.reasoning}
+              confidence={selectedAgent?.confidence}
+              finalAnswer={quorumResult?.final_answer}
+              quorumReached={quorumResult?.quorum_reached}
+              modeLabel={modeConfig.label}
+            />
+
+            <div className="grid grid-cols-1 gap-4 content-start">
+              {renderedAgents.map((agent) => (
+                <div key={agent.name} className="min-w-0 h-full">
+                  <AgentCard 
+                    name={agent.name}
+                    persona={showPersonas ? agent.persona : ''}
+                    status={agent.status}
+                    answer={agent.answer}
+                    reasoning={agent.reasoning}
+                    confidence={agent.confidence}
+                    isActive={agent.status === 'thinking'}
+                    positionChanged={agent.positionChanged}
+                    retryMessage={agent.retryMessage}
+                    selected={selectedAgent?.name === agent.name}
+                    onSelect={() => setSelectedAgentName(agent.name)}
+                    finalAnswer={quorumResult?.final_answer}
+                    quorumReached={quorumResult?.quorum_reached}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
