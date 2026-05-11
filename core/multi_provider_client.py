@@ -67,6 +67,16 @@ class MultiProviderClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
+        elif provider == "cerebras":
+            return await self._generate_openai_compatible(
+                api_key=provider_config["api_key"],
+                model=provider_config["model"],
+                base_url=provider_config["base_url"],
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
@@ -215,6 +225,50 @@ class MultiProviderClient:
             details = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"{exc.code} {details[:800]}") from exc
 
+    async def _generate_openai_compatible(
+        self,
+        api_key: str,
+        model: str,
+        base_url: str,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> LLMResponse:
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        data = await asyncio.to_thread(self._post_json_openai_compatible, base_url, headers, payload)
+        content = data.get("choices", [{}])[0].get("message", {}).get("content")
+        if not content:
+            raise ValueError(f"empty llm response: {json.dumps(data)[:500]}")
+        return LLMResponse(text=content)
+
+    def _post_json_openai_compatible(self, base_url: str, headers: dict, payload: dict) -> dict:
+        req = request.Request(
+            f"{base_url.rstrip('/')}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=60) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"{exc.code} {details[:800]}") from exc
+
 
 def create_mixed_provider_client() -> MultiProviderClient:
     """
@@ -265,16 +319,39 @@ def create_mixed_provider_client() -> MultiProviderClient:
             "model": gemini_model2,
         })
     
-    # Fallback: Groq for all 4 agents (if configured)
+    # Exploit Hunter: Groq secondary key
+    groq_key2 = os.getenv("GROQ_API_KEY2") or os.getenv("GROQ2_API_KEY") or os.getenv("GROQ2")
+    groq_model2 = os.getenv("GROQ_MODEL2", os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"))
+    if groq_key2:
+        providers.append({
+            "provider": "groq",
+            "api_key": groq_key2,
+            "model": groq_model2,
+            "role": "exploit_hunter",
+        })
+
+    # Fallback: Groq for all agents (if configured)
     groq_key = os.getenv("GROQ_API_KEY")
     groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     if groq_key:
-        # Add Groq 4 times (one fallback per agent)
-        for _ in range(4):
+        for _ in range(5):
             providers.append({
                 "provider": "groq",
                 "api_key": groq_key,
                 "model": groq_model,
+            })
+
+    # Fallback: Cerebras for any provider that fails
+    cerebras_key = os.getenv("CEREBRAS_API_KEY")
+    cerebras_model = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+    cerebras_base_url = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
+    if cerebras_key:
+        for _ in range(5):
+            providers.append({
+                "provider": "cerebras",
+                "api_key": cerebras_key,
+                "model": cerebras_model,
+                "base_url": cerebras_base_url,
             })
     
     if not providers:

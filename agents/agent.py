@@ -28,6 +28,11 @@ class Agent:
         # Use multi-provider client
         self.llm = create_mixed_provider_client()
         self.provider_index = start_key_index
+        if self.persona_type == "ExploitHunter":
+            for index, provider in enumerate(self.llm.providers):
+                if provider.get("role") == "exploit_hunter":
+                    self.provider_index = index
+                    break
         self.current_provider = self.llm.providers[self.provider_index % len(self.llm.providers)]
 
     def _rotate_key(self):
