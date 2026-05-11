@@ -304,7 +304,18 @@ class SessionManager:
                 
                 syn_agent = SynthesisAgent()
                 rounds_data = session_data.get("rounds", [])
-                synthesis = await asyncio.to_thread(syn_agent.synthesize, session.question, rounds_data)
+                try:
+                    synthesis = await asyncio.wait_for(
+                        asyncio.to_thread(syn_agent.synthesize, session.question, rounds_data),
+                        timeout=70.0
+                    )
+                except asyncio.TimeoutError:
+                    synthesis = {
+                        "summary": "Consensus synthesis timed out.",
+                        "agreement": [],
+                        "disagreement": [],
+                        "synthesis": final_answer
+                    }
                 
                 session.session_data["synthesis_report"] = synthesis
                 session.emit("synthesis_report", synthesis)

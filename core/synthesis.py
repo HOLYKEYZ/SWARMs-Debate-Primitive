@@ -27,7 +27,7 @@ class SynthesisAgent:
     async def _synthesize_async(self, prompt: str) -> str:
         last_error: Exception | None = None
         tried_providers = []
-        for index in range(len(self.llm.providers)):
+        for index in range(min(2, len(self.llm.providers))):
             provider_config = self.llm.providers[index % len(self.llm.providers)]
             provider_name = provider_config.get("provider", "unknown")
             model = provider_config.get("model", "unknown")
@@ -41,7 +41,7 @@ class SynthesisAgent:
                         user_prompt=prompt,
                         temperature=0.4,
                     ),
-                    timeout=60.0,
+                    timeout=30.0,
                 )
                 print(f"  [synthesis] success with {provider_name}/{model}")
                 return response.text
