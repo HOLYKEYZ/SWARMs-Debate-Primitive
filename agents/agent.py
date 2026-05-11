@@ -120,29 +120,18 @@ class Agent:
                         temperature=0.7,
                         max_tokens=4096,
                     ),
-                    timeout=60.0
+                    timeout=25.0
                 )
                 return self._parse_response(response.text)
 
             except Exception as e:
                 error_str = str(e).lower()
                 
-                # rotate through providers first without waiting
-                if attempt < len(self.llm.providers):
+                # rotate through the full provider pool without waiting
+                if attempt < total_attempts - 1:
                     self._rotate_key()
                     if self.on_retry:
                         self.on_retry(self.name, attempt + 1, 0)
-                    continue
-                
-                # after exhausting all providers, wait and retry with exponential backoff
-                if attempt < total_attempts - 1:
-                    delay = min(BASE_RETRY_DELAY * (2 ** (attempt - len(self.llm.providers) + 1)), 30)
-                    print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{total_attempts})...")
-                    
-                    if self.on_retry:
-                        self.on_retry(self.name, attempt + 1, delay)
-                        
-                    await asyncio.sleep(delay)
                     continue
                 
                 # exhausted all retries - return error response

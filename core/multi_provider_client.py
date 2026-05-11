@@ -159,7 +159,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=60) as response:
+            with request.urlopen(req, timeout=25) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -174,7 +174,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=60) as response:
+            with request.urlopen(req, timeout=25) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -219,7 +219,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=60) as response:
+            with request.urlopen(req, timeout=25) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -263,7 +263,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=60) as response:
+            with request.urlopen(req, timeout=25) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -272,14 +272,10 @@ class MultiProviderClient:
 
 def create_mixed_provider_client() -> MultiProviderClient:
     """
-    Create a client with mixed providers:
-    - Agents 1-2: NVIDIA
-    - Agents 3-4: Gemini
-    - Fallback: Groq (if others fail)
+    Create a client with the shared provider fallback pool.
     """
     providers = []
     
-    # Agent 1: NVIDIA
     nvidia_key1 = os.getenv("NVIDIA_API_KEY")
     nvidia_model1 = os.getenv("NVIDIA_MODEL", "moonshotai/kimi-k2.6")
     if nvidia_key1:
@@ -288,8 +284,6 @@ def create_mixed_provider_client() -> MultiProviderClient:
             "api_key": nvidia_key1,
             "model": nvidia_model1,
         })
-    
-    # Agent 2: NVIDIA
     nvidia_key2 = os.getenv("NVIDIA_API_KEY2", nvidia_key1)
     nvidia_model2 = os.getenv("NVIDIA_MODEL2", nvidia_model1)
     if nvidia_key2:
@@ -298,63 +292,7 @@ def create_mixed_provider_client() -> MultiProviderClient:
             "api_key": nvidia_key2,
             "model": nvidia_model2,
         })
-    
-    # Agent 3: Gemini
-    gemini_key1 = os.getenv("GEMINI_API_KEY")
-    gemini_model1 = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-    if gemini_key1:
-        providers.append({
-            "provider": "gemini",
-            "api_key": gemini_key1,
-            "model": gemini_model1,
-        })
-    
-    # Agent 4: Gemini
-    gemini_key2 = os.getenv("GEMINI_API_KEY2", gemini_key1)
-    gemini_model2 = os.getenv("GEMINI_MODEL2", gemini_model1)
-    if gemini_key2:
-        providers.append({
-            "provider": "gemini",
-            "api_key": gemini_key2,
-            "model": gemini_model2,
-        })
-    
-    # Exploit Hunter: Groq secondary key
-    groq_key2 = os.getenv("GROQ_API_KEY2") or os.getenv("GROQ2_API_KEY") or os.getenv("GROQ2")
-    groq_model2 = os.getenv("GROQ_MODEL2", os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"))
-    if groq_key2:
-        providers.append({
-            "provider": "groq",
-            "api_key": groq_key2,
-            "model": groq_model2,
-            "role": "exploit_hunter",
-        })
 
-    # Fallback: Groq for all agents (if configured)
-    groq_key = os.getenv("GROQ_API_KEY")
-    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-    if groq_key:
-        for _ in range(5):
-            providers.append({
-                "provider": "groq",
-                "api_key": groq_key,
-                "model": groq_model,
-            })
-
-    # Fallback: Cerebras for any provider that fails
-    cerebras_key = os.getenv("CEREBRAS_API_KEY")
-    cerebras_model = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
-    cerebras_base_url = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
-    if cerebras_key:
-        for _ in range(5):
-            providers.append({
-                "provider": "cerebras",
-                "api_key": cerebras_key,
-                "model": cerebras_model,
-                "base_url": cerebras_base_url,
-            })
-
-    # Fallback: Abliteration OpenAI-compatible API
     abliteration_key = os.getenv("ABLITERATION_API_KEY")
     abliteration_model = os.getenv("ABLITERATION_MODEL", "abliterated-model")
     abliteration_base_url = os.getenv("ABLITERATION_BASE_URL", "https://api.abliteration.ai/v1")
@@ -365,6 +303,56 @@ def create_mixed_provider_client() -> MultiProviderClient:
                 "api_key": abliteration_key,
                 "model": abliteration_model,
                 "base_url": abliteration_base_url,
+            })
+
+    gemini_key1 = os.getenv("GEMINI_API_KEY")
+    gemini_model1 = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    if gemini_key1:
+        providers.append({
+            "provider": "gemini",
+            "api_key": gemini_key1,
+            "model": gemini_model1,
+        })
+
+    gemini_key2 = os.getenv("GEMINI_API_KEY2", gemini_key1)
+    gemini_model2 = os.getenv("GEMINI_MODEL2", gemini_model1)
+    if gemini_key2:
+        providers.append({
+            "provider": "gemini",
+            "api_key": gemini_key2,
+            "model": gemini_model2,
+        })
+
+    groq_key2 = os.getenv("GROQ_API_KEY2") or os.getenv("GROQ2_API_KEY") or os.getenv("GROQ2")
+    groq_model2 = os.getenv("GROQ_MODEL2", os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"))
+    if groq_key2:
+        providers.append({
+            "provider": "groq",
+            "api_key": groq_key2,
+            "model": groq_model2,
+            "role": "exploit_hunter",
+        })
+
+    groq_key = os.getenv("GROQ_API_KEY")
+    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    if groq_key:
+        for _ in range(5):
+            providers.append({
+                "provider": "groq",
+                "api_key": groq_key,
+                "model": groq_model,
+            })
+
+    cerebras_key = os.getenv("CEREBRAS_API_KEY")
+    cerebras_model = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+    cerebras_base_url = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
+    if cerebras_key:
+        for _ in range(5):
+            providers.append({
+                "provider": "cerebras",
+                "api_key": cerebras_key,
+                "model": cerebras_model,
+                "base_url": cerebras_base_url,
             })
     
     if not providers:
