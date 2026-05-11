@@ -1,5 +1,5 @@
 """
-Multi-provider LLM client supporting NVIDIA NIM and Google Gemini
+Multi-provider LLM client supporting NVIDIA NIM, Google Gemini, and Groq
 """
 import asyncio
 import json
@@ -17,12 +17,12 @@ class LLMResponse:
 
 
 class MultiProviderClient:
-    """LLM client that supports multiple providers (NVIDIA, Gemini)"""
+    """LLM client that supports multiple providers (NVIDIA, Gemini, Groq)"""
     
     def __init__(self, provider_configs: list[dict]):
         """
         provider_configs: list of dicts with keys:
-            - provider: "nvidia" or "gemini"
+            - provider: "nvidia" or "gemini" or "groq"
             - api_key: str
             - model: str
         """
@@ -51,6 +51,15 @@ class MultiProviderClient:
             )
         elif provider == "gemini":
             return await self._generate_gemini(
+                api_key=provider_config["api_key"],
+                model=provider_config["model"],
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        elif provider == "groq":
+            return await self._generate_groq(
                 api_key=provider_config["api_key"],
                 model=provider_config["model"],
                 system_prompt=system_prompt,
@@ -160,6 +169,51 @@ class MultiProviderClient:
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"{exc.code} {details[:800]}") from exc
+    
+    async def _generate_groq(
+        self,
+        api_key: str,
+        model: str,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> LLMResponse:
+        """Generate using Groq"""
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        data = await asyncio.to_thread(self._post_json_groq, headers, payload)
+        content = data.get("choices", [{}])[0].get("message", {}).get("content")
+        if not content:
+            raise ValueError(f"empty llm response: {json.dumps(data)[:500]}")
+        return LLMResponse(text=content)
+    
+    def _post_json_groq(self, headers: dict, payload: dict) -> dict:
+        """POST to Groq API"""
+        req = request.Request(
+            "https://api.groq.com/openai/v1/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with request.urlopen(req, timeout=60) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except error.HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"{exc.code} {details[:800]}") from exc
 
 
 def create_mixed_provider_client() -> MultiProviderClient:
@@ -167,6 +221,7 @@ def create_mixed_provider_client() -> MultiProviderClient:
     Create a client with mixed providers:
     - Agents 1-2: NVIDIA
     - Agents 3-4: Gemini
+    - Fallback: Groq (if others fail)
     """
     providers = []
     
@@ -208,6 +263,16 @@ def create_mixed_provider_client() -> MultiProviderClient:
             "provider": "gemini",
             "api_key": gemini_key2,
             "model": gemini_model2,
+        })
+    
+    # Fallback: Groq (if configured)
+    groq_key = os.getenv("GROQ_API_KEY")
+    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    if groq_key:
+        providers.append({
+            "provider": "groq",
+            "api_key": groq_key,
+            "model": groq_model,
         })
     
     if not providers:
