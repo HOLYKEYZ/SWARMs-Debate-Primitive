@@ -26,21 +26,42 @@ const personaColors: Record<string, string> = {
   Skeptic: 'text-amber-400 border-amber-400/30 bg-amber-400/5',
 };
 
-// Determine stance from answer text
+// Improved semantic stance detection
 function getStance(answer?: string): 'support' | 'against' | 'neutral' {
   if (!answer) return 'neutral';
   
-  const lower = answer.toLowerCase();
+  const text = answer.toLowerCase().trim();
   
-  // Strong support indicators
-  const supportWords = ['yes', 'support', 'agree', 'approve', 'favor', 'should', 'recommend', 'positive', 'beneficial', 'true', 'correct'];
-  const againstWords = ['no', 'against', 'disagree', 'reject', 'oppose', 'should not', 'shouldn\'t', 'negative', 'harmful', 'false', 'incorrect'];
+  // Check first 50 characters for strong indicators
+  const opening = text.substring(0, 50);
   
-  const supportCount = supportWords.filter(word => lower.includes(word)).length;
-  const againstCount = againstWords.filter(word => lower.includes(word)).length;
+  // Strong negation patterns
+  if (/^(no|not|never|reject|oppose|against|disagree|agi should not|should not)/i.test(opening)) {
+    return 'against';
+  }
   
-  if (supportCount > againstCount) return 'support';
-  if (againstCount > supportCount) return 'against';
+  // Strong support patterns
+  if (/^(yes|support|agree|approve|favor|agi should|should be|recommend)/i.test(opening)) {
+    return 'support';
+  }
+  
+  // Check for "should not" or "shouldn't" anywhere
+  if (/should\s*n[o']t|shouldn't|must\s*not|cannot|can't\s+(be|support)/i.test(text)) {
+    return 'against';
+  }
+  
+  // Check for conditional/nuanced language (neutral)
+  if (/\b(conditional|tiered|framework|depends|nuanced|complex|both sides|however|although)\b/.test(text)) {
+    return 'neutral';
+  }
+  
+  // Fallback: count strong sentiment words
+  const againstWords = (text.match(/\b(not|no\b|never|reject|oppose|against|disagree|harmful|dangerous|risk|threat)\b/g) || []).length;
+  const supportWords = (text.match(/\b(yes|should|agree|support|favor|beneficial|positive|safe|good)\b/g) || []).length;
+  
+  if (againstWords > supportWords + 1) return 'against';
+  if (supportWords > againstWords + 1) return 'support';
+  
   return 'neutral';
 }
 
@@ -58,7 +79,7 @@ export default function AgentCard({
   const [isExpanded, setIsExpanded] = useState(false);
   
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
-  const hasContent = (status === 'responded' || answer) && !retryMessage;
+  const hasContent = (status === 'responded' && answer) && !retryMessage;
   const stance = getStance(answer);
   
   const stanceConfig = {
@@ -72,9 +93,8 @@ export default function AgentCard({
   return (
     <div className={cn(
       "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col",
-      isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-70 scale-100",
-      colorClass.split(' ')[2],
-      isExpanded ? "min-h-[500px]" : "min-h-[260px]"
+      isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-90 scale-100",
+      colorClass.split(' ')[2]
     )}>
       
       {/* Position Change Indicator */}
@@ -132,7 +152,7 @@ export default function AgentCard({
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 flex flex-col justify-start relative">
+      <div className="flex-1 flex flex-col justify-start relative min-h-[180px]">
         {retryMessage ? (
           <div className="flex flex-col gap-2 items-center text-center animate-in fade-in zoom-in">
             <p className="text-xs font-medium text-amber-400/80 italic">{retryMessage}</p>
@@ -146,7 +166,7 @@ export default function AgentCard({
           <div className="text-white/30 text-sm font-medium flex items-center justify-center h-full gap-2">
             Waiting for turn...
           </div>
-        ) : status === 'thinking' ? (
+        ) : status === 'thinking' && !answer ? (
           <div className="text-white/60 text-sm font-medium flex items-center gap-2 animate-pulse">
             <RefreshCw className="w-4 h-4 animate-spin" /> Analyzing context...
           </div>
@@ -154,8 +174,8 @@ export default function AgentCard({
 
         {hasContent && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* Position */}
-            <div className="bg-black/40 rounded-xl p-4 border border-white/5">
+            {/* Position - LARGER TEXT */}
+            <div className="bg-black/40 rounded-xl p-5 border border-white/5">
               <div className="flex justify-between items-center mb-3">
                 <div className="text-xs text-white/40 uppercase tracking-widest font-semibold">
                   Position
@@ -167,8 +187,8 @@ export default function AgentCard({
                 )}
               </div>
               <div className={cn(
-                "text-base font-bold text-white break-words leading-relaxed",
-                !isExpanded && "line-clamp-2"
+                "text-lg font-bold text-white break-words leading-relaxed",
+                !isExpanded && "line-clamp-3"
               )}>
                 {answer || 'N/A'}
               </div>
@@ -176,13 +196,13 @@ export default function AgentCard({
             
             {/* Reasoning */}
             {reasoning && (
-              <div className="bg-black/20 rounded-xl p-4 border border-white/5">
+              <div className="bg-black/20 rounded-xl p-5 border border-white/5">
                 <div className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-3">
                   Reasoning
                 </div>
                 <div className={cn(
-                  "text-sm text-white/80 leading-relaxed whitespace-pre-wrap break-words",
-                  !isExpanded && "line-clamp-3"
+                  "text-base text-white/80 leading-relaxed whitespace-pre-wrap break-words",
+                  !isExpanded && "line-clamp-4"
                 )}>
                   {reasoning}
                 </div>

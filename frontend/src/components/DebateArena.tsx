@@ -641,9 +641,9 @@ export default function DebateArena() {
           {/* Debate Graph Visualization */}
           <DebateGraph agents={agents} round={currentRound} />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full auto-rows-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {renderedAgents.map((agent) => (
-              <div key={agent.name} className="min-w-0">
+              <div key={agent.name} className="min-w-0 h-full">
                 <AgentCard 
                   name={agent.name}
                   persona={showPersonas ? agent.persona : ''}
