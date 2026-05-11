@@ -24,7 +24,8 @@ rate_limit_store = defaultdict(list)
 
 # allowed origins from env, comma separated. localhost dev defaults included.
 _default_origins = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:4000,http://127.0.0.1:4000"
-ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
+ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", _default_origins)
+ALLOWED_ORIGINS = ["*"] if ALLOWED_ORIGINS_STR == "*" else [o.strip() for o in ALLOWED_ORIGINS_STR.split(",") if o.strip()]
 
 
 def check_rate_limit(client_ip: str) -> bool:
