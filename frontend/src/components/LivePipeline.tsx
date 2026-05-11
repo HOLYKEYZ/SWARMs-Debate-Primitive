@@ -28,7 +28,8 @@ export default function LivePipeline({ currentStatus }: LivePipelineProps) {
   const currentIndex = getStepIndex(currentStatus);
 
   return (
-    <div className="w-full glass-panel p-4 rounded-2xl border-white/5 mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div className="w-full glass-panel p-4 rounded-2xl border-white/5 mb-8 overflow-x-auto">
+      <div className="flex justify-between items-center gap-4 min-w-max">
       {steps.map((step, index) => {
         const Icon = step.icon;
         const isCompleted = currentIndex > index || currentStatus === 'complete';
@@ -51,17 +52,18 @@ export default function LivePipeline({ currentStatus }: LivePipelineProps) {
               <span className={`text-[10px] uppercase tracking-widest font-black transition-colors ${isActive ? 'text-blue-400' : isCompleted ? 'text-green-500/70' : 'text-white/20'}`}>
                 Step 0{index + 1}
               </span>
-              <span className={`text-sm font-bold transition-colors ${isActive ? 'text-white' : isCompleted ? 'text-white/60' : 'text-white/10'}`}>
+              <span className={`text-sm font-bold transition-colors whitespace-nowrap ${isActive ? 'text-white' : isCompleted ? 'text-white/60' : 'text-white/10'}`}>
                 {step.label}
               </span>
             </div>
 
             {index < steps.length - 1 && (
-              <div className="hidden md:block w-8 h-[1px] bg-white/5 mx-2" />
+              <div className="w-8 h-[1px] bg-white/5 mx-2" />
             )}
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
