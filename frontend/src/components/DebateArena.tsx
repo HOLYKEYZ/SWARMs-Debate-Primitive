@@ -93,7 +93,6 @@ export default function DebateArena() {
   const [statusMessage, setStatusMessage] = useState<string>("ready for a new swarm run");
   const [currentRound, setCurrentRound] = useState<number | null>(null);
   const [messages, setMessages] = useState<EventData[]>([]);
-  const [isConnected, setIsConnected] = useState<boolean>(true);
   
   // state from events
   const [selectorResult, setSelectorResult] = useState<SelectorResult | null>(null);
@@ -160,9 +159,10 @@ export default function DebateArena() {
           };
         });
         setAgents(restored);
+        setSelectedAgentName(responses[0]?.name ?? null);
       } else {
         setAgents({});
-      setSelectedAgentName(null);
+        setSelectedAgentName(null);
       }
       setStatus(data.status === 'complete' ? 'complete' : 'idle');
       setStatusMessage(data.status === 'complete' ? 'Session complete' : 'Session loaded');
@@ -380,7 +380,7 @@ export default function DebateArena() {
 
     es.onmessage = (event) => consumeEvent("message", event.data);
 
-    es.onerror = (error) => {
+    es.onerror = () => {
       console.log("SSE error or connection closed, readyState:", es.readyState);
       
       // If connection is closed and we're still running, try to reconnect
