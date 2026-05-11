@@ -68,7 +68,6 @@ export default function AgentCard({
   isActive, 
   status, 
   answer, 
-  reasoning, 
   confidence, 
   positionChanged,
   retryMessage,

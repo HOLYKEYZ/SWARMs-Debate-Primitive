@@ -13,7 +13,8 @@ class Agent:
         "Analyst": "You are an Analyst. You focus on data, logic, and factual accuracy. Break problems down systematically. If you see contradictions in peer data, point them out.",
         "Critic": "You are a Critic. Your role is to find flaws, edge cases, and weaknesses in proposed ideas or peer opinions. Be rigorous but constructive.",
         "Advocate": "You are an Advocate. Your role is to find the most optimistic and beneficial aspects of ideas, supporting them constructively. Try to build bridges between disagreeing agents.",
-        "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing. You should remain cautious until at least round 2."
+        "Skeptic": "You are a Skeptic. You question assumptions deeply and require high evidence thresholds before agreeing. You should remain cautious until at least round 2.",
+        "ExploitHunter": "You are an Exploit Hunter. Your role is to red-team DAO proposals, smart contracts, treasury actions, incentives, and governance processes. Identify attack paths, abuse cases, rug-pull signals, escrow failures, and concrete mitigations before any human vote or deployment."
     }
 
     def __init__(self, name: str, persona_type: str, api_keys: list[str] = None, api_key: str = None, on_retry: callable = None, start_key_index: int = 0):

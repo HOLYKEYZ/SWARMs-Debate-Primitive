@@ -37,6 +37,15 @@ interface ChainReceiptData {
   signature: string;
   explorer_url: string;
   verified?: boolean;
+  artifacts?: Array<{ type: string; signature: string; explorer_url: string }>;
+}
+
+interface AgentSettlement {
+  persona: string;
+  reputation_delta: number;
+  stake_delta_sol: number;
+  matched_consensus: boolean;
+  explorer_url: string;
 }
 
 interface SynthesisReportData {
@@ -99,6 +108,8 @@ export default function DebateArena() {
   const [quorumResult, setQuorumResult] = useState<QuorumResult | null>(null);
   const [chainReceipt, setChainReceipt] = useState<ChainReceiptData | null>(null);
   const [synthesisReport, setSynthesisReport] = useState<SynthesisReportData | null>(null);
+  const [agentMemory, setAgentMemory] = useState<string | null>(null);
+  const [settlements, setSettlements] = useState<AgentSettlement[]>([]);
   
   // agents state
   const [agents, setAgents] = useState<Record<string, AgentState>>({});
@@ -196,6 +207,8 @@ export default function DebateArena() {
     setQuorumResult(null);
     setChainReceipt(null);
     setSynthesisReport(null);
+    setAgentMemory(null);
+    setSettlements([]);
     setMessages([]);
     setAgents({});
     setStatus("submitting");
@@ -307,6 +320,29 @@ export default function DebateArena() {
       }
     }
 
+    if (eventType === "artifact_receipt") {
+      if (typeof data.type === "string" && typeof data.signature === "string" && typeof data.explorer_url === "string") {
+        setChainReceipt(prev => prev ? {
+          ...prev,
+          artifacts: [...(prev.artifacts || []), { type: data.type as string, signature: data.signature as string, explorer_url: data.explorer_url as string }]
+        } : prev);
+      }
+    }
+
+    if (eventType === "agent_memory" && typeof data.memory === "string") {
+      setAgentMemory(data.memory);
+    }
+
+    if (eventType === "agent_settlement") {
+      setSettlements(prev => [...prev, {
+        persona: typeof data.persona === "string" ? data.persona : "Agent",
+        reputation_delta: typeof data.reputation_delta === "number" ? data.reputation_delta : 0,
+        stake_delta_sol: typeof data.stake_delta_sol === "number" ? data.stake_delta_sol : 0,
+        matched_consensus: Boolean(data.matched_consensus),
+        explorer_url: typeof data.explorer_url === "string" ? data.explorer_url : "",
+      }]);
+    }
+
     if (eventType === "synthesis_report") {
       setSynthesisReport({
         summary: typeof data.summary === "string" ? data.summary : "",
@@ -368,6 +404,9 @@ export default function DebateArena() {
       "synthesis_report",
       "transcript_hashed",
       "chain_receipt",
+      "artifact_receipt",
+      "agent_memory",
+      "agent_settlement",
       "chain_error",
       "session_complete",
       "error",
@@ -427,6 +466,7 @@ export default function DebateArena() {
         { name: "Agent_2_Critic", persona: "Critic", status: 'idle' as const },
         { name: "Agent_3_Advocate", persona: "Advocate", status: 'idle' as const },
         { name: "Agent_4_Skeptic", persona: "Skeptic", status: 'idle' as const },
+        { name: "Agent_5_ExploitHunter", persona: "ExploitHunter", status: 'idle' as const },
       ];
   const selectedAgent = renderedAgents.find((agent) => agent.name === selectedAgentName) ?? renderedAgents.find((agent) => agent.status === 'thinking') ?? renderedAgents.find((agent) => agent.answer) ?? renderedAgents[0];
   const modeConfig = {
@@ -557,8 +597,8 @@ export default function DebateArena() {
 
             {mode === "bounty" && (
               <div className="rounded-2xl border border-green-400/20 bg-green-400/10 p-4">
-                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-green-200/80">bounty marketplace preview</div>
-                <p className="mt-2 text-sm leading-6 text-white/65">Connect Phantom, attach a devnet SOL bounty, and the escrow program can release after quorum once the deployed program id is configured.</p>
+                <div className="text-[10px] font-black uppercase tracking-[0.25em] text-green-200/80">bounty marketplace</div>
+                <p className="mt-2 text-sm leading-6 text-white/65">This run will emit a Devnet bounty-resolution artifact after quorum. Full escrow transfer requires the deployed Anchor program id and IDL.</p>
               </div>
             )}
 
@@ -713,6 +753,13 @@ export default function DebateArena() {
           </div>
           
           <DebateGraph agents={agents} round={currentRound} />
+
+          {agentMemory && (
+            <div className="rounded-3xl border border-purple-400/20 bg-purple-400/10 p-5">
+              <div className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-200/80">agent memory injected</div>
+              <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/70">{agentMemory}</pre>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6 w-full">
             <AgentResponseTheater
@@ -782,6 +829,8 @@ export default function DebateArena() {
                   signature={chainReceipt.signature}
                   hash={typeof transcriptHash === "string" ? transcriptHash : ''}
                   explorerUrl={chainReceipt.explorer_url}
+                  artifacts={chainReceipt.artifacts}
+                  settlements={settlements}
                 />
              )}
           </div>

@@ -68,6 +68,17 @@ def _finalize_tally(responses: list[dict], agent_count: int, quorum_threshold: f
     }
 
 
+def _classify_session_mode(question: str) -> str:
+    text = question.lower()
+    if "dao" in text or "proposal" in text or "treasury" in text or "governance" in text:
+        return "dao"
+    if "bounty" in text or "escrow" in text:
+        return "bounty"
+    if "audit" in text or "smart contract" in text or "exploit" in text or "rust" in text:
+        return "audit"
+    return "general"
+
+
 class SessionEvent:
     """a single event emitted during a session for sse streaming."""
     def __init__(self, event_type: str, data: dict):
@@ -224,6 +235,22 @@ class SessionManager:
         )
         return [s.to_dict() for s in sorted_sessions[:limit]]
 
+    def _memory_context(self, question: str, limit: int = 3) -> str:
+        keywords = {word.strip(".,:;!?()[]{}").lower() for word in question.split() if len(word.strip(".,:;!?()[]{}")) > 4}
+        memories = []
+        for previous in sorted(self.sessions.values(), key=lambda s: s.created_at, reverse=True):
+            if previous.status != "complete" or not previous.session_data or previous.question == question:
+                continue
+            previous_keywords = {word.strip(".,:;!?()[]{}").lower() for word in previous.question.split() if len(word.strip(".,:;!?()[]{}")) > 4}
+            if keywords and not keywords.intersection(previous_keywords):
+                continue
+            memories.append(f"- previous decision: {previous.question[:120]} -> {previous._get_final_answer()}")
+            if len(memories) >= limit:
+                break
+        if not memories:
+            return ""
+        return "Relevant prior swarm memory:\n" + "\n".join(memories)
+
     async def run_session(self, session: Session):
         """execute the full pipeline asynchronously, emitting events at each step."""
         try:
@@ -246,11 +273,14 @@ class SessionManager:
             session.emit("status", {"status": "running", "message": f"Starting {session.mechanism}..."})
 
             agents = self._create_agents(session)
+            memory_context = self._memory_context(session.question)
+            if memory_context:
+                session.emit("agent_memory", {"memory": memory_context})
 
             if session.mechanism == "debate":
-                session_data = await self._run_debate(session.question, session, agents)
+                session_data = await self._run_debate(session.question, session, agents, memory_context)
             else:
-                session_data = await self._run_vote(session.question, session, agents)
+                session_data = await self._run_vote(session.question, session, agents, memory_context)
 
             session.session_data = session_data
 
@@ -310,6 +340,36 @@ class SessionManager:
                         "verified": session.chain_verified,
                         "explorer_url": f"https://explorer.solana.com/tx/{signature}?cluster=devnet",
                     })
+
+                    artifact_signature = await asyncio.to_thread(
+                        client.log_decision_artifact,
+                        session.session_id,
+                        transcript_data["hash"],
+                        final_answer,
+                        quorum,
+                        session_data.get("confidence_score", 0),
+                    )
+                    session.emit("artifact_receipt", {
+                        "type": "decision_artifact",
+                        "signature": artifact_signature,
+                        "explorer_url": f"https://explorer.solana.com/tx/{artifact_signature}?cluster=devnet",
+                    })
+
+                    mode = _classify_session_mode(session.question)
+                    if mode == "dao":
+                        dao_signature = await asyncio.to_thread(client.log_governance_result, session.session_id, transcript_data["hash"], final_answer)
+                        session.emit("artifact_receipt", {
+                            "type": "dao_prevote",
+                            "signature": dao_signature,
+                            "explorer_url": f"https://explorer.solana.com/tx/{dao_signature}?cluster=devnet",
+                        })
+                    elif mode == "bounty":
+                        bounty_signature = await asyncio.to_thread(client.log_bounty_resolution, session.session_id, transcript_data["hash"], 0.05, True)
+                        session.emit("artifact_receipt", {
+                            "type": "bounty_resolution",
+                            "signature": bounty_signature,
+                            "explorer_url": f"https://explorer.solana.com/tx/{bounty_signature}?cluster=devnet",
+                        })
                     
                     rounds_data = session_data.get("rounds", [])
                     if rounds_data:
@@ -320,7 +380,19 @@ class SessionManager:
                             agent_id = get_agent_id(resp.get("persona", ""))
                             delta = compute_reputation_delta(ans, final_answer, conf, quorum)
                             if agent_id:
-                                await asyncio.to_thread(client.log_agent_reputation, agent_id, session.session_id, delta)
+                                rep_signature = await asyncio.to_thread(client.log_agent_reputation, agent_id, session.session_id, delta)
+                                matched = ans.strip().lower() == final_answer.strip().lower()
+                                stake_signature = await asyncio.to_thread(client.log_staking_settlement, session.session_id, agent_id, 0.05, delta / 100, matched)
+                                session.emit("agent_settlement", {
+                                    "agent_id": agent_id,
+                                    "persona": resp.get("persona", ""),
+                                    "reputation_delta": delta,
+                                    "stake_delta_sol": round(delta / 100, 4),
+                                    "matched_consensus": matched,
+                                    "reputation_signature": rep_signature,
+                                    "stake_signature": stake_signature,
+                                    "explorer_url": f"https://explorer.solana.com/tx/{stake_signature}?cluster=devnet",
+                                })
 
                 except Exception as e:
                     session.emit("chain_error", {"error": str(e)})
@@ -340,7 +412,7 @@ class SessionManager:
         meta = MetaAgent()
         return meta.analyze(question)
 
-    async def _run_debate(self, question: str, session: Session, agents: list[Agent]) -> dict:
+    async def _run_debate(self, question: str, session: Session, agents: list[Agent], memory_context: str = "") -> dict:
         """run debate with event emissions for each agent action."""
         num_rounds = session.rounds
         all_rounds = []
@@ -357,7 +429,7 @@ class SessionManager:
         round_responses = []
         for agent in agents:
             session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = await agent.generate_response(question)
+            result = await agent.generate_response(question, memory_context)
             round_responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,
@@ -393,7 +465,7 @@ class SessionManager:
                     "round": r, "peers": len(peer_opinions)
                 })
 
-                result = await agent.generate_response(question, "", peer_opinions)
+                result = await agent.generate_response(question, memory_context, peer_opinions)
                 previous_self_response = None
                 for prev_resp in previous_responses:
                     if prev_resp["name"] == agent.name:
@@ -462,7 +534,7 @@ class SessionManager:
             "failed_response_count": tally_result["failed_response_count"],
         }
 
-    async def _run_vote(self, question: str, session: Session, agents: list[Agent]) -> dict:
+    async def _run_vote(self, question: str, session: Session, agents: list[Agent], memory_context: str = "") -> dict:
         """run vote with event emissions for each agent action."""
         responses = []
 
@@ -473,7 +545,7 @@ class SessionManager:
 
         for agent in agents:
             session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = await agent.generate_response(question)
+            result = await agent.generate_response(question, memory_context)
             responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,

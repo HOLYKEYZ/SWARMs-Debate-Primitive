@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Network, Trophy, Activity, Loader2 } from 'lucide-react';
+import { Network, Trophy, Activity, Loader2, ArrowUpRight } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 
@@ -17,6 +17,7 @@ const personaColors: Record<string, {text: string, border: string, bg: string, r
   Critic: { text: 'text-rose-400', border: 'border-rose-500/30', bg: 'bg-rose-500/5', ring: 'group-hover:ring-rose-500/50', grad: 'from-rose-500/20 to-red-600/5', shadow: 'hover:shadow-rose-500/20' },
   Advocate: { text: 'text-emerald-400', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5', ring: 'group-hover:ring-emerald-500/50', grad: 'from-emerald-500/20 to-green-600/5', shadow: 'hover:shadow-emerald-500/20' },
   Skeptic: { text: 'text-amber-400', border: 'border-amber-500/30', bg: 'bg-amber-500/5', ring: 'group-hover:ring-amber-500/50', grad: 'from-amber-500/20 to-orange-600/5', shadow: 'hover:shadow-amber-500/20' },
+  ExploitHunter: { text: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500/5', ring: 'group-hover:ring-purple-500/50', grad: 'from-purple-500/20 to-fuchsia-600/5', shadow: 'hover:shadow-purple-500/20' },
 };
 
 export default function AgentsPage() {
@@ -102,6 +103,15 @@ export default function AgentsPage() {
                         </div>
                       </div>
                     </div>
+
+                    <a
+                      href={`https://explorer.solana.com/address/${agent.agent_id}?cluster=devnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-xs font-black uppercase tracking-widest text-white/45 transition-colors hover:text-white"
+                    >
+                      verify reputation trail <ArrowUpRight className="h-4 w-4" />
+                    </a>
                   </div>
                 </div>
               );

@@ -5,9 +5,17 @@ interface ChainReceiptProps {
   signature: string;
   hash: string;
   explorerUrl: string;
+  artifacts?: Array<{ type: string; signature: string; explorer_url: string }>;
+  settlements?: Array<{
+    persona: string;
+    reputation_delta: number;
+    stake_delta_sol: number;
+    matched_consensus: boolean;
+    explorer_url: string;
+  }>;
 }
 
-export default function ChainReceipt({ signature, hash, explorerUrl }: ChainReceiptProps) {
+export default function ChainReceipt({ signature, hash, explorerUrl, artifacts = [], settlements = [] }: ChainReceiptProps) {
   
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -85,6 +93,40 @@ export default function ChainReceipt({ signature, hash, explorerUrl }: ChainRece
           This decision artifact anchors the swarm transcript hash, consensus outcome, and agent reputation settlement trail to Solana Memo. It is structured as NFT-ready metadata without claiming a mint until the NFT program is wired.
         </p>
       </div>
+
+      {(artifacts.length > 0 || settlements.length > 0) && (
+        <div className="relative z-10 mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {artifacts.length > 0 && (
+            <div className="rounded-2xl border border-purple-400/20 bg-purple-400/10 p-5">
+              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-purple-200/80">artifact tx stream</div>
+              <div className="space-y-2">
+                {artifacts.map((artifact) => (
+                  <a key={`${artifact.type}-${artifact.signature}`} href={artifact.explorer_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-white/70 hover:text-white">
+                    <span className="font-black uppercase tracking-widest">{artifact.type.replaceAll('_', ' ')}</span>
+                    <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {settlements.length > 0 && (
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+              <div className="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-emerald-200/80">agent stake settlements</div>
+              <div className="space-y-2">
+                {settlements.map((settlement, index) => (
+                  <a key={`${settlement.persona}-${index}`} href={settlement.explorer_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs text-white/70 hover:text-white">
+                    <span className="font-black">{settlement.persona}</span>
+                    <span className={settlement.matched_consensus ? "text-emerald-300" : "text-rose-300"}>
+                      {settlement.stake_delta_sol > 0 ? '+' : ''}{settlement.stake_delta_sol.toFixed(4)} SOL
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="relative z-10 mt-8 flex justify-end">
         <a 
