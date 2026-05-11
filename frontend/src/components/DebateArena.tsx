@@ -9,7 +9,7 @@ import LivePipeline from './LivePipeline';
 import SessionHistory from './SessionHistory';
 import ConsensusReport from './ConsensusReport';
 import DebateGraph from './DebateGraph';
-import { Send, Loader2, Play, Gauge, Users, Radio, Coins, ShieldAlert, Vote, History, X } from 'lucide-react';
+import { Send, Loader2, Play, Gauge, Users, Radio, Coins, ShieldAlert, Vote, History, X, RotateCcw } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -112,6 +112,7 @@ export default function DebateArena() {
   const [selectorResult, setSelectorResult] = useState<SelectorResult | null>(null);
   const [quorumResult, setQuorumResult] = useState<QuorumResult | null>(null);
   const [chainReceipt, setChainReceipt] = useState<ChainReceiptData | null>(null);
+  const [chainError, setChainError] = useState<string | null>(null);
   const [synthesisReport, setSynthesisReport] = useState<SynthesisReportData | null>(null);
   const [agentMemory, setAgentMemory] = useState<string | null>(null);
   const [settlements, setSettlements] = useState<AgentSettlement[]>([]);
@@ -133,6 +134,7 @@ export default function DebateArena() {
   const [showHistory, setShowHistory] = useState<boolean>(false);
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const autoLoadHistoryRef = useRef(true);
 
   const loadSession = useCallback(async (sessionId: string) => {
     try {
@@ -153,6 +155,7 @@ export default function DebateArena() {
         explorer_url: `https://explorer.solana.com/tx/${data.chain_signature}?cluster=devnet`,
         artifacts: Array.isArray(data.artifacts) ? data.artifacts : [],
       } : null);
+      setChainError(null);
       setSettlements(Array.isArray(data.settlements) ? data.settlements : []);
 
       setSynthesisReport(data.synthesis_report);
@@ -203,7 +206,7 @@ export default function DebateArena() {
       const data = await res.json();
       const successfulHistory: SessionRecord[] = Array.isArray(data) ? data : [];
       setHistory(successfulHistory);
-      if (!activeSessionId && status === "idle" && successfulHistory.length > 0) {
+      if (autoLoadHistoryRef.current && !activeSessionId && status === "idle" && successfulHistory.length > 0) {
         await loadSession(successfulHistory[0].session_id);
       }
     } catch (err) {
@@ -229,6 +232,7 @@ export default function DebateArena() {
     setSelectorResult(null);
     setQuorumResult(null);
     setChainReceipt(null);
+    setChainError(null);
     setSynthesisReport(null);
     setAgentMemory(null);
     setSettlements([]);
@@ -340,6 +344,7 @@ export default function DebateArena() {
     if (eventType === "chain_receipt") {
       if (typeof data.signature === "string" && typeof data.explorer_url === "string") {
         setChainReceipt({ signature: data.signature, explorer_url: data.explorer_url });
+        setChainError(null);
       }
     }
 
@@ -364,6 +369,10 @@ export default function DebateArena() {
         matched_consensus: Boolean(data.matched_consensus),
         explorer_url: typeof data.explorer_url === "string" ? data.explorer_url : "",
       }]);
+    }
+
+    if (eventType === "chain_error") {
+      setChainError(typeof data.error === "string" ? data.error : "Chain write failed");
     }
 
     if (eventType === "synthesis_report") {
