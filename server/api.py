@@ -236,6 +236,16 @@ async def verify_signature(signature: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/")
+async def root():
+    """basic service probe for deployment platforms."""
+    return {
+        "status": "ok",
+        "service": "swarms-debate-primitive",
+        "health": "/api/health",
+    }
+
+
 @app.get("/api/health")
 async def health():
     """health check endpoint. verifies database connectivity and api key presence."""
