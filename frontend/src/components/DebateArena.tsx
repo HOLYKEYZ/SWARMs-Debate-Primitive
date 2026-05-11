@@ -9,9 +9,14 @@ import LivePipeline from './LivePipeline';
 import SessionHistory from './SessionHistory';
 import ConsensusReport from './ConsensusReport';
 import DebateGraph from './DebateGraph';
-import AgentResponseTheater from './AgentResponseTheater';
 import { Send, Loader2, Play, Gauge, Users, Radio, Coins, ShieldAlert, Vote, History, X } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface EventData {
   event: string;
@@ -114,6 +119,17 @@ export default function DebateArena() {
   // agents state
   const [agents, setAgents] = useState<Record<string, AgentState>>({});
   const [selectedAgentName, setSelectedAgentName] = useState<string | null>(null);
+  const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (name: string) => {
+    setExpandedAgents((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+    setSelectedAgentName(name);
+  };
 
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -776,51 +792,39 @@ export default function DebateArena() {
           <DebateGraph agents={agents} round={currentRound} />
 
           {agentMemory && (
-            <div className="rounded-3xl border border-purple-400/20.6 bg-minmax(r,1fr)e-400/10 p-5">
+            <div className="rounded-3xl border border-purple-400/20 bg-purple-400/10 p-5">
               <div className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-200/80">agent memory injected</div>
               <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/70">{agentMemory}</pre>
             </div>
           )}
           
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6 w-full">
-            <AgentResponseTheater
-              name={selectedAgent?.name}
-              persona={showPersonas ? selectedAgent?.persona : ''}
-              status={selectedAgent?.status}
-              answer={selectedAgent?.answer}
-              reasoning={selectedAgent?.reasoning}
-              confidence={selectedAgent?.confidence}
-              finalAnswer={quorumResult?.final_answer}
-              quorumReached={quorumResult?.quorum_reached}
-              modeLabel={modeConfig.label}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4 content-start">
-              {renderedAgents.map((agent) => {
-                const settlement = settlementByPersona[agent.persona];
-                return (
-                  <div key={agent.name} className="min-w-0 h-full">
-                    <AgentCard
-                      name={agent.name}
-                      persona={showPersonas ? agent.persona : ''}
-                      status={agent.status}
-                      answer={agent.answer}
-                      reasoning={agent.reasoning}
-                      confidence={agent.confidence}
-                      isActive={agent.status === 'thinking'}
-                      positionChanged={agent.positionChanged}
-                      retryMessage={agent.retryMessage}
-                      selected={selectedAgent?.name === agent.name}
-                      onSelect={() => setSelectedAgentName(agent.name)}
-                      finalAnswer={quorumResult?.final_answer}
-                      quorumReached={quorumResult?.quorum_reached}
-                      stakeDelta={settlement?.stake_delta_sol}
-                      settled={Boolean(settlement)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-full items-start">
+            {renderedAgents.map((agent) => {
+              const settlement = settlementByPersona[agent.persona];
+              const isExpanded = expandedAgents.has(agent.name);
+              return (
+                <div key={agent.name} className={cn("min-w-0", isExpanded && "sm:col-span-2 lg:col-span-3 xl:col-span-5")}>
+                  <AgentCard
+                    name={agent.name}
+                    persona={showPersonas ? agent.persona : ''}
+                    status={agent.status}
+                    answer={agent.answer}
+                    reasoning={agent.reasoning}
+                    confidence={agent.confidence}
+                    isActive={agent.status === 'thinking'}
+                    positionChanged={agent.positionChanged}
+                    retryMessage={agent.retryMessage}
+                    selected={selectedAgent?.name === agent.name}
+                    onSelect={() => toggleExpanded(agent.name)}
+                    finalAnswer={quorumResult?.final_answer}
+                    quorumReached={quorumResult?.quorum_reached}
+                    stakeDelta={settlement?.stake_delta_sol}
+                    settled={Boolean(settlement)}
+                    expanded={isExpanded}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

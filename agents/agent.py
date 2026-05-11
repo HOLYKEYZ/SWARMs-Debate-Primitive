@@ -4,8 +4,8 @@ import config
 from core.multi_provider_client import create_mixed_provider_client, MultiProviderClient
 
 # max retries for api calls
-MAX_RETRIES = 12
-BASE_RETRY_DELAY = 8
+MAX_RETRIES = 6
+BASE_RETRY_DELAY = 4
 
 
 class Agent:
@@ -125,26 +125,26 @@ class Agent:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = True
-
-                if is_retryable:
-                    if attempt < len(self.llm.providers):
-                        self._rotate_key()
-                        if self.on_retry:
-                            self.on_retry(self.name, attempt + 1, 0)
-                        continue 
+                
+                # rotate through providers first without waiting
+                if attempt < len(self.llm.providers):
+                    self._rotate_key()
+                    if self.on_retry:
+                        self.on_retry(self.name, attempt + 1, 0)
+                    continue
+                
+                # after exhausting all providers, wait and retry with exponential backoff
+                if attempt < MAX_RETRIES - 1:
+                    delay = min(BASE_RETRY_DELAY * (2 ** (attempt - len(self.llm.providers) + 1)), 30)
+                    print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{MAX_RETRIES})...")
                     
-                    if attempt < MAX_RETRIES - 1:
-                        delay = BASE_RETRY_DELAY * (2 ** (attempt - len(self.llm.providers) + 1))
-                        print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{MAX_RETRIES})...")
+                    if self.on_retry:
+                        self.on_retry(self.name, attempt + 1, delay)
                         
-                        if self.on_retry:
-                            self.on_retry(self.name, attempt + 1, delay)
-                            
-                        await asyncio.sleep(delay)
-                        continue
-                    
-                # non-retryable or exhausted retries
+                    await asyncio.sleep(delay)
+                    continue
+                
+                # exhausted all retries - return error response
                 provider = self.current_provider["provider"]
                 key = self.current_provider["api_key"]
                 masked_key = f"...{key[-4:]}"

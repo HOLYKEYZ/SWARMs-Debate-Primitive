@@ -91,7 +91,7 @@ export default function DebateGraph({ agents, round }: DebateGraphProps) {
       const angle = (index / nodes.length) * Math.PI * 2 - Math.PI / 2;
       const x = centerX + Math.cos(angle) * radius;
       const y = centerY + Math.sin(angle) * radius;
-      const nodeRadius = 40 + (node.confidence * 20);
+      const nodeRadius = 32 + (node.confidence * 16);
 
       // Draw glow
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, nodeRadius * 1.5);
@@ -110,29 +110,41 @@ export default function DebateGraph({ agents, round }: DebateGraphProps) {
 
       // Draw persona label
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(node.persona, x, y - 8);
+      ctx.fillText(node.persona, x, y - 6);
 
       // Draw confidence
-      ctx.font = '10px sans-serif';
+      ctx.font = '9px sans-serif';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.fillText(`${Math.round(node.confidence * 100)}%`, x, y + 8);
+      ctx.fillText(`${Math.round(node.confidence * 100)}%`, x, y + 7);
     });
 
-    // Draw center hub
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    // draw center hub on top of nodes (sized so the SWARM + state labels sit comfortably inside)
+    const hubRadius = 50;
+    const hubGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, hubRadius);
+    hubGradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+    hubGradient.addColorStop(0.7, 'rgba(59, 130, 246, 0.2)');
+    hubGradient.addColorStop(1, 'rgba(255, 255, 255, 0.08)');
+    ctx.fillStyle = hubGradient;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, hubRadius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.fillText('SWARM', centerX, centerY - 5);
-    ctx.font = '9px sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.fillText(round !== null ? `R${round}` : 'IDLE', centerX, centerY + 8);
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('SWARM', centerX, centerY - 10);
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = round === null ? 'rgba(34, 197, 94, 0.9)' : 'rgba(255, 255, 255, 0.75)';
+    ctx.fillText(round !== null ? `ROUND ${round}` : 'IDLE', centerX, centerY + 10);
 
   }, [nodes, round]);
 

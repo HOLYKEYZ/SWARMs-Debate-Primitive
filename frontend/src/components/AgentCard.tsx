@@ -1,7 +1,7 @@
 import React from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Brain, Coins, RefreshCw, ThumbsDown, ThumbsUp, User } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp, Coins, RefreshCw, ThumbsDown, ThumbsUp, User } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -23,6 +23,7 @@ interface AgentCardProps {
   quorumReached?: boolean;
   stakeDelta?: number;
   settled?: boolean;
+  expanded?: boolean;
 }
 
 const personaColors: Record<string, string> = {
@@ -70,6 +71,7 @@ export default function AgentCard({
   isActive, 
   status, 
   answer, 
+  reasoning,
   confidence, 
   positionChanged,
   retryMessage,
@@ -79,6 +81,7 @@ export default function AgentCard({
   quorumReached,
   stakeDelta,
   settled: settledProp,
+  expanded,
 }: AgentCardProps) {
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
   const hasContent = (status === 'responded' && answer) && !retryMessage;
@@ -142,6 +145,11 @@ export default function AgentCard({
             </span>
           </div>
         </div>
+        {hasContent && (
+          <div className="text-white/40">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 flex flex-col justify-between gap-4 relative">
@@ -168,8 +176,17 @@ export default function AgentCard({
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="bg-black/40 rounded-xl p-4 border border-white/5">
               <div className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Position</div>
-              <div className="text-base font-black text-white break-words leading-relaxed line-clamp-3">{answer || 'N/A'}</div>
+              <div className={cn("text-base font-black text-white break-words leading-relaxed", !expanded && "line-clamp-3")}>{answer || 'N/A'}</div>
             </div>
+
+            {expanded && reasoning && (
+              <div className="bg-black/30 rounded-xl p-4 border border-white/5">
+                <div className="flex items-center gap-1 text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">
+                  <Brain className="h-3 w-3" /> reasoning
+                </div>
+                <div className="text-sm text-white/75 break-words leading-relaxed whitespace-pre-wrap">{reasoning}</div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-white/5 bg-black/25 p-3">
@@ -185,6 +202,10 @@ export default function AgentCard({
                 </div>
               </div>
             </div>
+
+            {!expanded && reasoning && (
+              <div className="text-[10px] uppercase tracking-widest text-white/30 font-black">tap to view reasoning</div>
+            )}
           </div>
         )}
       </div>
