@@ -67,7 +67,7 @@ class MultiProviderClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-        elif provider == "cerebras":
+        elif provider == "cerebras" or provider == "abliteration":
             return await self._generate_openai_compatible(
                 api_key=provider_config["api_key"],
                 model=provider_config["model"],
@@ -352,6 +352,19 @@ def create_mixed_provider_client() -> MultiProviderClient:
                 "api_key": cerebras_key,
                 "model": cerebras_model,
                 "base_url": cerebras_base_url,
+            })
+
+    # Fallback: Abliteration OpenAI-compatible API
+    abliteration_key = os.getenv("ABLITERATION_API_KEY")
+    abliteration_model = os.getenv("ABLITERATION_MODEL", "abliterated-model")
+    abliteration_base_url = os.getenv("ABLITERATION_BASE_URL", "https://api.abliteration.ai/v1")
+    if abliteration_key:
+        for _ in range(5):
+            providers.append({
+                "provider": "abliteration",
+                "api_key": abliteration_key,
+                "model": abliteration_model,
+                "base_url": abliteration_base_url,
             })
     
     if not providers:
