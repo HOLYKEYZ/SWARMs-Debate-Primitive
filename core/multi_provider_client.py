@@ -276,6 +276,17 @@ def create_mixed_provider_client() -> MultiProviderClient:
     """
     providers = []
     
+    abliteration_key = os.getenv("ABLITERATION_API_KEY")
+    abliteration_model = os.getenv("ABLITERATION_MODEL", "abliterated-model")
+    abliteration_base_url = os.getenv("ABLITERATION_BASE_URL", "https://api.abliteration.ai/v1")
+    if abliteration_key:
+        providers.append({
+            "provider": "abliteration",
+            "api_key": abliteration_key,
+            "model": abliteration_model,
+            "base_url": abliteration_base_url,
+        })
+
     nvidia_key1 = os.getenv("NVIDIA_API_KEY")
     nvidia_model1 = os.getenv("NVIDIA_MODEL", "moonshotai/kimi-k2.6")
     if nvidia_key1:
@@ -291,17 +302,6 @@ def create_mixed_provider_client() -> MultiProviderClient:
             "provider": "nvidia",
             "api_key": nvidia_key2,
             "model": nvidia_model2,
-        })
-
-    abliteration_key = os.getenv("ABLITERATION_API_KEY")
-    abliteration_model = os.getenv("ABLITERATION_MODEL", "abliterated-model")
-    abliteration_base_url = os.getenv("ABLITERATION_BASE_URL", "https://api.abliteration.ai/v1")
-    if abliteration_key:
-        providers.append({
-            "provider": "abliteration",
-            "api_key": abliteration_key,
-            "model": abliteration_model,
-            "base_url": abliteration_base_url,
         })
 
     gemini_key1 = os.getenv("GEMINI_API_KEY")
