@@ -120,7 +120,7 @@ class Agent:
                         temperature=0.7,
                         max_tokens=4096,
                     ),
-                    timeout=25.0
+                    timeout=60.0
                 )
                 return self._parse_response(response.text)
 

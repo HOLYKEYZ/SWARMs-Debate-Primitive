@@ -159,7 +159,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=25) as response:
+            with request.urlopen(req, timeout=60) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -174,7 +174,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=25) as response:
+            with request.urlopen(req, timeout=60) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -219,7 +219,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=25) as response:
+            with request.urlopen(req, timeout=60) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -263,7 +263,7 @@ class MultiProviderClient:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=25) as response:
+            with request.urlopen(req, timeout=60) as response:
                 return json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             details = exc.read().decode("utf-8", errors="replace")
@@ -297,13 +297,12 @@ def create_mixed_provider_client() -> MultiProviderClient:
     abliteration_model = os.getenv("ABLITERATION_MODEL", "abliterated-model")
     abliteration_base_url = os.getenv("ABLITERATION_BASE_URL", "https://api.abliteration.ai/v1")
     if abliteration_key:
-        for _ in range(5):
-            providers.append({
-                "provider": "abliteration",
-                "api_key": abliteration_key,
-                "model": abliteration_model,
-                "base_url": abliteration_base_url,
-            })
+        providers.append({
+            "provider": "abliteration",
+            "api_key": abliteration_key,
+            "model": abliteration_model,
+            "base_url": abliteration_base_url,
+        })
 
     gemini_key1 = os.getenv("GEMINI_API_KEY")
     gemini_model1 = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -324,7 +323,7 @@ def create_mixed_provider_client() -> MultiProviderClient:
         })
 
     groq_key2 = os.getenv("GROQ_API_KEY2") or os.getenv("GROQ2_API_KEY") or os.getenv("GROQ2")
-    groq_model2 = os.getenv("GROQ_MODEL2", os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"))
+    groq_model2 = os.getenv("GROQ_MODEL2", os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"))
     if groq_key2:
         providers.append({
             "provider": "groq",
@@ -334,26 +333,24 @@ def create_mixed_provider_client() -> MultiProviderClient:
         })
 
     groq_key = os.getenv("GROQ_API_KEY")
-    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    groq_model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
     if groq_key:
-        for _ in range(5):
-            providers.append({
-                "provider": "groq",
-                "api_key": groq_key,
-                "model": groq_model,
-            })
+        providers.append({
+            "provider": "groq",
+            "api_key": groq_key,
+            "model": groq_model,
+        })
 
     cerebras_key = os.getenv("CEREBRAS_API_KEY")
-    cerebras_model = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+    cerebras_model = os.getenv("CEREBRAS_MODEL", "llama3.1-8b")
     cerebras_base_url = os.getenv("CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1")
     if cerebras_key:
-        for _ in range(5):
-            providers.append({
-                "provider": "cerebras",
-                "api_key": cerebras_key,
-                "model": cerebras_model,
-                "base_url": cerebras_base_url,
-            })
+        providers.append({
+            "provider": "cerebras",
+            "api_key": cerebras_key,
+            "model": cerebras_model,
+            "base_url": cerebras_base_url,
+        })
     
     if not providers:
         raise ValueError("No API keys configured for any provider")
