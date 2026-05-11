@@ -384,6 +384,7 @@ export default function DebateArena() {
 
     const consumeEvent = (eventType: string, rawData: string) => {
       try {
+        if (!rawData || rawData === "undefined") return;
         const payload = JSON.parse(rawData);
 
         if (eventType === "heartbeat") return;
