@@ -513,6 +513,11 @@ export default function DebateArena() {
     },
   }[mode];
   const transcriptHash = messages.find((m) => m.event === 'transcript_hashed')?.data.hash;
+  const hasOnChainReceipt = Boolean(chainReceipt);
+  const hasStakeSettlements = settlements.length > 0;
+  const shouldShowSynthesisReport = Boolean(
+    synthesisReport && !synthesisReport.summary.toLowerCase().includes('api ') && !synthesisReport.summary.toLowerCase().includes('error')
+  );
 
   // map persona -> latest settlement so each agent card shows its real stake delta
   const settlementByPersona = settlements.reduce<Record<string, AgentSettlement>>((acc, s) => {
@@ -590,13 +595,13 @@ export default function DebateArena() {
                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
                  <Coins className="w-3 h-3 text-green-400" /> stake
                </div>
-               <div className="text-sm font-bold text-white">{(renderedAgents.length * 0.05).toFixed(2)} SOL pooled</div>
+               <div className="text-sm font-bold text-white">{hasStakeSettlements ? `${settlements.length} settled` : 'not settled'}</div>
              </div>
              <div className="glass-panel rounded-lg p-4 min-w-0">
                <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/30 font-black mb-2">
                  <ShieldAlert className="w-3 h-3 text-purple-400" /> proof
                </div>
-               <div className="text-sm font-bold text-white">{chainReceipt ? 'on-chain verified' : 'pending'}</div>
+               <div className="text-sm font-bold text-white">{hasOnChainReceipt ? 'on-chain verified' : 'not written'}</div>
              </div>
            </div>
            
@@ -835,7 +840,7 @@ export default function DebateArena() {
       )}
 
         {/* Quorum / Receipt Section */}
-        {(quorumResult || synthesisReport) && (
+        {(quorumResult || shouldShowSynthesisReport || chainReceipt) && (
           <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
              {quorumResult && <QuorumMeter confidence={quorumResult.confidence_score} threshold={quorumThreshold} />}
 
@@ -850,7 +855,7 @@ export default function DebateArena() {
                </div>
              )}
              
-             {synthesisReport && (
+             {shouldShowSynthesisReport && synthesisReport && (
                <ConsensusReport {...synthesisReport} />
              )}
              
