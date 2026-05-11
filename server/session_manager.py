@@ -241,10 +241,14 @@ class SessionManager:
         for previous in sorted(self.sessions.values(), key=lambda s: s.created_at, reverse=True):
             if previous.status != "complete" or not previous.session_data or previous.question == question:
                 continue
+            final_answer = previous._get_final_answer()
+            if not final_answer or "no valid agent responses" in str(final_answer).lower() or "api quota" in str(final_answer).lower():
+                continue
             previous_keywords = {word.strip(".,:;!?()[]{}").lower() for word in previous.question.split() if len(word.strip(".,:;!?()[]{}")) > 4}
             if keywords and not keywords.intersection(previous_keywords):
                 continue
-            memories.append(f"- previous decision: {previous.question[:120]} -> {previous._get_final_answer()}")
+            previous_question = " ".join(previous.question.split())
+            memories.append(f"- previous decision: {previous_question[:80]} -> {final_answer}")
             if len(memories) >= limit:
                 break
         if not memories:

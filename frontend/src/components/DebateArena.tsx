@@ -799,7 +799,13 @@ export default function DebateArena() {
           {agentMemory && (
             <div className="rounded-3xl border border-purple-400/20 bg-purple-400/10 p-5">
               <div className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-200/80">agent memory injected</div>
-              <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/70">{agentMemory}</pre>
+              <div className="mt-3 flex flex-col gap-2 text-sm leading-6 text-white/70">
+                {agentMemory.split('\n').filter((line) => line.startsWith('- ')).map((line) => (
+                  <div key={line} className="line-clamp-2 break-words rounded-xl border border-white/5 bg-black/20 px-3 py-2">
+                    {line}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           
