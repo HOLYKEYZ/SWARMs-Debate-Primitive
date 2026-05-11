@@ -15,17 +15,20 @@ def get_agent_id(persona_type: str) -> str:
 def compute_reputation_delta(agent_answer: str, final_answer: str, confidence: float, quorum_reached: bool) -> float:
     """
     Calculate the reputation delta for a single session.
-    - Matches final consensus: + (confidence * 10)
-    - Disagrees with consensus: - (confidence * 5)
-    - No quorum: - 2 (penalty for failure to coordinate)
+    - Matches final consensus: + (confidence * 10) - bonus for alignment
+    - Disagrees with consensus: + (confidence * 3) - still rewarded for thoughtful participation
+    - No quorum: + 1 - base participation reward
+    
+    Philosophy: All agents contribute value through diverse perspectives.
+    Disagreement is not failure - it's part of healthy deliberation.
     """
     if not quorum_reached:
-        return -2.0
+        return 1.0  # base participation reward
     
     agent_ans = str(agent_answer).strip().lower()
     final_ans = str(final_answer).strip().lower()
     
     if agent_ans == final_ans:
-        return round(float(confidence) * 10.0, 2)
+        return round(float(confidence) * 10.0, 2)  # consensus bonus
     else:
-        return round(-(float(confidence) * 5.0), 2)
+        return round(float(confidence) * 3.0, 2)  # participation reward

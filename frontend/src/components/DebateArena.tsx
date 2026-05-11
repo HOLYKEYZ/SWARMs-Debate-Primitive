@@ -491,16 +491,17 @@ export default function DebateArena() {
     };
   }, [handleEvent, fetchHistory]);
 
-  // reconnect to SSE when tab becomes visible
+  // reconnect to SSE when tab becomes visible (only for running sessions)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && activeSessionId) {
-        console.log("Tab became visible, reconnecting to SSE");
+      if (document.visibilityState === 'visible' && activeSessionId && isRunning) {
+        console.log("Tab became visible, checking SSE connection");
         if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
           console.log("SSE already connected, skipping reconnect");
           return;
         }
-        // reconnect to SSE for live updates
+        // reconnect to SSE for live updates only if session is still running
+        console.log("Reconnecting to SSE for running session");
         connectSSE(activeSessionId);
       }
     };
@@ -509,7 +510,7 @@ export default function DebateArena() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [activeSessionId, connectSSE]);
+  }, [activeSessionId, connectSSE, isRunning]);
 
   const isIdle = status === "idle";
   const isRunning = ["submitting", "selecting", "running", "synthesizing", "hashing", "chain"].includes(status);
