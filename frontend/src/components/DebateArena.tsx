@@ -161,12 +161,17 @@ export default function DebateArena() {
       setChainReceipt(data.chain_signature ? {
         signature: data.chain_signature,
         explorer_url: `https://explorer.solana.com/tx/${data.chain_signature}?cluster=devnet`,
+        artifacts: Array.isArray(data.artifacts) ? data.artifacts : [],
       } : null);
+      setSettlements(Array.isArray(data.settlements) ? data.settlements : []);
 
       setSynthesisReport(data.synthesis_report);
 
-      // messages stream from sse is empty for replayed sessions; transcript_hash is read directly from `data` instead.
-      setMessages([]);
+      setMessages(typeof data.transcript_hash === "string" ? [{
+        event: "transcript_hashed",
+        data: { hash: data.transcript_hash },
+        timestamp: new Date().toISOString(),
+      }] : []);
 
       // rebuild agent state from the final round so completed sessions still show responses
       const transcriptRounds: TranscriptRound[] = data.transcript_data?.rounds ?? [];
@@ -211,6 +216,12 @@ export default function DebateArena() {
       }
     };
   }, [fetchHistory]);
+
+  useEffect(() => {
+    if (!activeSessionId && status === "idle" && history.length > 0) {
+      loadSession(history[0].session_id);
+    }
+  }, [activeSessionId, history, loadSession, status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
