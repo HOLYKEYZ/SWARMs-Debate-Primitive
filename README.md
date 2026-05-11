@@ -1,40 +1,43 @@
 # SWARMs Debate Primitive
 
-A multi-agent debate and vote coordination system that turns AI deliberation into trust-minimized coordination infrastructure on the Solana blockchain. Agents assume distinct personas (Analyst, Critic, Advocate, Skeptic) to debate or vote on complex questions. Once quorum is reached, the full session transcript and outcomes are serialized, hashed, and permanently recorded on the Solana Devnet via the Memo program, providing a verifiable block-proof of AI consensus.
+A multi-agent debate and vote coordination system that turns AI deliberation into verifiable coordination infrastructure on Solana Devnet. Agents assume distinct personas (Analyst, Critic, Advocate, Skeptic, Exploit Hunter) to debate or vote on complex questions. Once quorum is reached, the session transcript is serialized, SHA256-hashed, and recorded through Solana Memo transactions with additional artifacts for reputation, staking settlement, DAO prevotes, and bounty resolution.
 
 ## 🎯 Key Features
 
 ### Multi-Provider AI Architecture
-- **Hybrid Intelligence**: Combines NVIDIA NIM (Kimi K2.6) and Google Gemini (2.5 Flash)
-- **Agents 1-2**: NVIDIA NIM for deep reasoning
-- **Agents 3-4**: Google Gemini for fast, diverse perspectives
-- **Automatic Failover**: Seamless provider switching on rate limits
+- **Hybrid Intelligence**: Combines NVIDIA NIM, Google Gemini, Groq, and Cerebras
+- **Exploit Hunter Routing**: Uses the secondary Groq key for adversarial security review when configured
+- **Cerebras Fallback**: Adds an OpenAI-compatible fallback provider for failed model calls
+- **Automatic Failover**: Rotates providers on quota, rate limit, and timeout failures
 
 ### Real-Time Deliberation Visualization
+- **5-Agent Swarm**: Analyst, Critic, Advocate, Skeptic, and Exploit Hunter
 - **5-Step Pipeline**: Mechanism Selection → Swarm Deliberation → Consensus Synthesis → Transcript Hashing → Chain Logging
 - **Stance Indicators**: Each agent displays Support/Against/Neutral badges
 - **Live Updates**: Server-Sent Events (SSE) for real-time agent responses
-- **Expandable Cards**: Click to view full reasoning and confidence scores
+- **Deliberation Theater**: Clickable agent tiles with a large response panel for full reasoning
 
 ### Blockchain Verification
 - **Immutable Proof**: SHA256 transcript hash logged to Solana Devnet
-- **Verifiable**: Every deliberation has an on-chain receipt
-- **Transparent**: Full audit trail from question to consensus
+- **Decision Artifacts**: Structured Solana Memo payloads for quorum result metadata
+- **Agent Settlements**: Reputation and stake-settlement artifacts emitted after consensus
+- **DAO and Bounty Artifacts**: DAO prevote and bounty-resolution receipts for relevant questions
 
 ### Professional UI/UX
 - **Modern Design**: Glass-morphism with smooth animations
 - **Responsive**: Works on desktop and mobile
 - **Wallet Integration**: Solana wallet connection for on-chain interactions
 - **Session History**: Browse and replay past deliberations
+- **Agent Memory**: Relevant prior decisions are injected into new deliberations
 
 ## Recent Updates
 
 ### Latest (Hackathon Build)
-- **Multi-Provider Support**: Added Gemini alongside NVIDIA for better rate limit handling
-- **Stance Indicators**: Visual badges showing agent positions (Support/Against/Neutral)
-- **Complete Pipeline**: All 5 steps now visible in real-time
-- **UI Polish**: Opaque navbar, fixed wallet connection, expandable agent cards
-- **Demo Questions**: 8 curated examples including AGI open-source debate
+- **Exploit Hunter**: Added an adversarial red-team agent for DAO, bounty, smart contract, and treasury risk review
+- **Provider Resilience**: Added Groq2 routing for Exploit Hunter and Cerebras as a fallback provider
+- **On-Chain Artifact Stream**: Added transcript, decision, DAO prevote, bounty resolution, reputation, and staking settlement memo receipts
+- **Agent Memory**: Previous relevant consensus outcomes can influence later sessions
+- **Deliberation Theater**: Reworked response display so judges can read full agent reasoning without tiny scrolling cards
 
 ### Previous Updates
 - **Session History Loading**: Fixed session history click to properly load and display past session data
@@ -46,17 +49,22 @@ A multi-agent debate and vote coordination system that turns AI deliberation int
 
 ## How It Works
 
-1. **Routing**: A heuristic selector analyzes the user's question. Simple factual queries trigger an independent parallel **Vote**, while complex ethical or strategic questions trigger a multi-round decentralized **Debate** where agents share and build upon peer opinions.
-2. **Coordination**: Agents deliberate, tracking position changes. A final tally is taken in the final round to check if a consensus (quorum) has been reached.
-3. **On-Chain Receipt**: If quorum is met, the transcript of the entire session (including all agent interactions, reasons, and the final answer) is JSON-serialized and strictly SHA256 hashed. The hash is pushed to the Solana blockchain, acting as a permanent and verifiable receipt of the AI's collective decision.
+1. **Routing**: A meta-agent analyzes the user's question and selects either independent voting or multi-round debate.
+2. **Coordination**: Five specialized agents deliberate, including an Exploit Hunter that red-teams governance, escrow, incentives, and smart contract risk.
+3. **Memory**: Relevant completed sessions are summarized and injected into new prompts when the current question overlaps prior decisions.
+4. **Quorum**: A final tally checks whether a quorum threshold was reached and records the confidence score.
+5. **On-Chain Receipt**: If quorum is met, the transcript hash and structured decision artifacts are written to Solana Devnet Memo transactions.
 
 ## Setup Instructions
 
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+ (for frontend)
-- NVIDIA NIM API Key (free tier: 40 RPM)
-- Google Gemini API Key (optional, for mixed provider setup)
+- NVIDIA NIM API key
+- Google Gemini API key
+- Groq API key
+- Cerebras API key
+- Funded Solana Devnet wallet
 
 ### Backend Setup
 
@@ -78,6 +86,16 @@ NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 # Google Gemini (Optional - for mixed provider)
 GEMINI_API_KEY=your-gemini-key-here
 GEMINI_MODEL=gemini-2.5-flash
+
+# Groq
+GROQ_API_KEY=your-groq-key-here
+GROQ_API_KEY2=your-exploit-hunter-groq-key-here
+GROQ_MODEL=llama-3.3-70b-versatile
+
+# Cerebras fallback
+CEREBRAS_API_KEY=your-cerebras-key-here
+CEREBRAS_MODEL=gpt-oss-120b
+CEREBRAS_BASE_URL=https://api.cerebras.ai/v1
 
 # Solana
 SOLANA_RPC_URL=https://api.devnet.solana.com
@@ -121,7 +139,7 @@ npm install
 python -m uvicorn server.api:app --host 127.0.0.1 --port 8000
 ```
 
-The backend will run on `http://localhost:8000`.
+The backend will run on `http://127.0.0.1:8000`.
 
 ### Start Frontend
 
@@ -152,14 +170,12 @@ python test_run.py
 
 Try these curated questions to showcase different deliberation scenarios:
 
-1. **AGI Open Source Debate** - "AGI should be open-sourced immediately upon creation."
-2. **Smart Contract Audit** - Security vulnerability analysis
-3. **Simple Math** - Quick vote mechanism demonstration
-4. **UBI Debate** - Complex economic policy discussion
+1. **DAO Treasury Proposal** - "Should this DAO allocate 15% of treasury to a new grants program?"
+2. **Smart Contract Audit** - "Audit this escrow design for exploit paths before deployment."
+3. **Bounty Marketplace** - "Resolve this protocol risk bounty after quorum."
+4. **AGI Open Source Debate** - "AGI should be open-sourced immediately upon creation."
 5. **Privacy vs Security** - Ethical dilemma with split decisions
-6. **DAO Governance** - Token allocation proposal
-7. **Medical Decision** - Treatment option analysis
-8. **Investment Decision** - Startup funding evaluation
+6. **Investment Decision** - Startup funding evaluation
 
 ## Example Output
 
@@ -173,10 +189,11 @@ STEP 1: SELECTOR DECISION
   Reasoning: Question contains complex/analytical signal ('should'). Requires debate.
 
 STEP 2: AGENT COORDINATION
-  [Agent_1_Analyst] (NVIDIA) deliberating...
-  [Agent_2_Critic] (NVIDIA) deliberating...
-  [Agent_3_Advocate] (Gemini) deliberating...
-  [Agent_4_Skeptic] (Gemini) deliberating...
+  [Agent_1_Analyst] deliberating...
+  [Agent_2_Critic] deliberating...
+  [Agent_3_Advocate] deliberating...
+  [Agent_4_Skeptic] deliberating...
+  [Agent_5_ExploitHunter] red-teaming...
 
 STEP 3: QUORUM CHECK
   Final Answer: Yes
@@ -206,7 +223,7 @@ Verifiable at:  https://explorer.solana.com/tx/4sHpTp...?cluster=devnet
 ### Backend
 - **Python 3.11+** - Core runtime
 - **FastAPI** - REST API and SSE streaming
-- **Multi-Provider LLM Client** - NVIDIA NIM + Google Gemini
+- **Multi-Provider LLM Client** - NVIDIA NIM + Google Gemini + Groq + Cerebras
 - **Solana.py & Solders** - Blockchain integration
 - **SQLite** - Session persistence
 
@@ -220,6 +237,8 @@ Verifiable at:  https://explorer.solana.com/tx/4sHpTp...?cluster=devnet
 ### AI Providers
 - **NVIDIA NIM** - Kimi K2.6 (1T parameter MoE model)
 - **Google Gemini** - 2.5 Flash (fast reasoning model)
+- **Groq** - Exploit Hunter routing and fallback
+- **Cerebras** - OpenAI-compatible fallback
 
 ## Architecture
 
@@ -239,25 +258,17 @@ Verifiable at:  https://explorer.solana.com/tx/4sHpTp...?cluster=devnet
 ┌───────▼──────┐ ┌───▼────────┐ ┌─▼──────────┐
 │ Multi-Provider│ │  Selector  │ │  Solana    │
 │  LLM Client   │ │   Logic    │ │  Client    │
-│ NVIDIA+Gemini │ │ Vote/Debate│ │  Devnet    │
+│ Multi-LLM Pool│ │ Vote/Debate│ │  Devnet    │
 └───────────────┘ └────────────┘ └────────────┘
 ```
 
 ## Rate Limits & Best Practices
 
-### NVIDIA NIM Free Tier
-- **40 requests per minute** per API key
-- **Solution**: Mixed provider setup (2 NVIDIA + 2 Gemini agents)
-
-### Google Gemini Free Tier
-- **15 requests per minute** per API key
-- **60 requests per day** per API key
-
 ### Recommendations
-1. Use mixed provider setup for better throughput
-2. Add delays between rounds for large deliberations
-3. Monitor backend logs for rate limit warnings
-4. Consider upgrading to paid tiers for production use
+1. Configure multiple providers for better throughput
+2. Keep a funded Devnet wallet available for memo writes
+3. Monitor backend logs for provider failover and chain receipts
+4. Consider paid tiers for production demos
 
 ## Troubleshooting
 
@@ -296,4 +307,4 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Built for hackathon submission** | **Powered by NVIDIA NIM & Google Gemini** | **Verified on Solana Devnet**
+**Built for hackathon submission** | **Powered by NVIDIA NIM, Gemini, Groq & Cerebras** | **Verified on Solana Devnet**
