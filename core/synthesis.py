@@ -26,8 +26,14 @@ class SynthesisAgent:
 
     async def _synthesize_async(self, prompt: str) -> str:
         last_error: Exception | None = None
+        tried_providers = []
         for index in range(len(self.llm.providers)):
+            provider_config = self.llm.providers[index % len(self.llm.providers)]
+            provider_name = provider_config.get("provider", "unknown")
+            model = provider_config.get("model", "unknown")
+            tried_providers.append(f"{provider_name}/{model}")
             try:
+                print(f"  [synthesis] trying {provider_name}/{model}...")
                 response = await asyncio.wait_for(
                     self.llm.generate(
                         provider_index=index,
@@ -37,11 +43,14 @@ class SynthesisAgent:
                     ),
                     timeout=60.0,
                 )
+                print(f"  [synthesis] success with {provider_name}/{model}")
                 return response.text
             except Exception as exc:
+                print(f"  [synthesis] {provider_name}/{model} failed: {exc}")
                 last_error = exc
                 continue
-        raise last_error if last_error else RuntimeError("synthesis failed with no providers")
+        error_msg = f"All providers failed: {', '.join(tried_providers)}. Last error: {last_error}"
+        raise RuntimeError(error_msg) if last_error else RuntimeError("synthesis failed with no providers")
 
     def synthesize(self, question: str, rounds: list) -> dict:
         """Analyze the full debate history and synthesize a final report."""
@@ -64,4 +73,10 @@ class SynthesisAgent:
             return {"summary": "Failed to parse synthesis.", "synthesis": "Inconclusive debate."}
 
         except Exception as e:
-            return {"summary": f"Synthesis error: {str(e)}", "synthesis": "Error during processing."}
+            error_detail = str(e)
+            # provide more helpful error messages
+            if "403" in error_detail:
+                return {"summary": "API rate limit or permission error. Try again later.", "synthesis": "Synthesis unavailable due to API restrictions."}
+            if "429" in error_detail or "quota" in error_detail.lower():
+                return {"summary": "API quota exhausted. Try again later.", "synthesis": "Synthesis unavailable due to rate limits."}
+            return {"summary": f"Synthesis error: {error_detail[:200]}", "synthesis": "Error during processing."}

@@ -92,7 +92,7 @@ export default function AgentCard({
     ? (typeof stakeDelta === 'number'
         ? `${stakeDelta >= 0 ? '+' : ''}${stakeDelta.toFixed(4)} SOL`
         : matchedConsensus ? '+reward pending' : 'slashed')
-    : '0.050 SOL';
+    : '0.05 SOL staked';
   
   const stanceConfig = {
     support: { icon: ThumbsUp, color: 'text-green-400 bg-green-400/10 border-green-400/30', label: 'Supporting' },

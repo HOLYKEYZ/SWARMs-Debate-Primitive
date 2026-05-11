@@ -28,12 +28,14 @@ export default function ConsensusReport({ summary, agreement, disagreement, synt
             <CheckCircle className="w-3 h-3" /> Points of Agreement
           </h4>
           <ul className="flex flex-col gap-2">
-            {agreement.map((item, i) => (
+            {agreement.length > 0 ? agreement.map((item, i) => (
               <li key={i} className="text-sm text-white/50 flex items-start gap-2">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500/30 shrink-0" />
                 {item}
               </li>
-            ))}
+            )) : (
+              <li className="text-sm text-white/30 italic">No agreement points identified</li>
+            )}
           </ul>
         </div>
         
@@ -42,12 +44,14 @@ export default function ConsensusReport({ summary, agreement, disagreement, synt
             <AlertCircle className="w-3 h-3" /> Points of Contention
           </h4>
           <ul className="flex flex-col gap-2">
-            {disagreement.map((item, i) => (
+            {disagreement.length > 0 ? disagreement.map((item, i) => (
               <li key={i} className="text-sm text-white/50 flex items-start gap-2">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-rose-500/30 shrink-0" />
                 {item}
               </li>
-            ))}
+            )) : (
+              <li className="text-sm text-white/30 italic">No contention points identified</li>
+            )}
           </ul>
         </div>
       </div>
