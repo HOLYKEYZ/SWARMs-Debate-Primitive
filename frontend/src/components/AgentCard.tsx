@@ -116,17 +116,7 @@ export default function AgentCard({
         </div>
       )}
       
-      {hasContent && (
-        <div className={cn(
-          "absolute top-4 right-4 px-3 py-1.5 rounded-lg border flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider z-20",
-          stanceConfig[stance].color
-        )}>
-          <StanceIcon className="w-3.5 h-3.5" />
-          {stanceConfig[stance].label}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-start justify-between gap-3 mb-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className={cn(
             "w-10 h-10 shrink-0 rounded-full flex items-center justify-center border",
@@ -146,8 +136,19 @@ export default function AgentCard({
           </div>
         </div>
         {hasContent && (
-          <div className="text-white/40">
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className={cn(
+              "rounded-lg border px-2 py-1 text-[9px] font-bold uppercase tracking-wider",
+              stanceConfig[stance].color
+            )}>
+              <div className="flex items-center gap-1">
+                <StanceIcon className="h-3 w-3" />
+                {stanceConfig[stance].label}
+              </div>
+            </div>
+            <div className="text-white/40">
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </div>
           </div>
         )}
       </div>
@@ -175,7 +176,7 @@ export default function AgentCard({
         {hasContent && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="bg-black/40 rounded-xl p-4 border border-white/5">
-              <div className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">Position</div>
+              <div className="text-[10px] text-white/40 uppercase tracking-widest font-semibold mb-2">argument</div>
               <div className={cn("text-base font-black text-white break-words leading-relaxed", !expanded && "line-clamp-3")}>{answer || 'N/A'}</div>
             </div>
 
@@ -204,7 +205,7 @@ export default function AgentCard({
             </div>
 
             {!expanded && reasoning && (
-              <div className="text-[10px] uppercase tracking-widest text-white/30 font-black">tap to view reasoning</div>
+              <div className="text-[10px] uppercase tracking-widest text-white/30 font-black">tap to view full argument</div>
             )}
           </div>
         )}
