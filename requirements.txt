@@ -1,8 +1,8 @@
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-sse-starlette==1.8.2
-pydantic==2.5.0
-sqlalchemy==2.0.23
-solana==0.30.2
-python-dotenv==1.0.0
-httpx==0.23.3
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+sse-starlette==2.2.1
+pydantic==2.10.3
+sqlalchemy==2.0.36
+solana==0.35.0
+python-dotenv==1.0.1
+httpx==0.28.1
