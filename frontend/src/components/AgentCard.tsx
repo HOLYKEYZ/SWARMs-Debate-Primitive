@@ -31,6 +31,7 @@ const personaColors: Record<string, string> = {
   Critic: 'text-red-400 border-red-400/30 bg-red-400/5',
   Advocate: 'text-green-400 border-green-400/30 bg-green-400/5',
   Skeptic: 'text-amber-400 border-amber-400/30 bg-amber-400/5',
+  ExploitHunter: 'text-purple-400 border-purple-400/30 bg-purple-400/5',
 };
 
 function getStance(answer?: string): 'support' | 'against' | 'neutral' {
@@ -130,7 +131,7 @@ export default function AgentCard({
           </div>
           <div className="flex min-w-0 flex-col gap-1">
             <h3 className="break-words text-sm font-black leading-tight tracking-tight text-white/90">{name}</h3>
-            <span className={cn("text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
+            <span className={cn("break-words text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
               {retryMessage ? 'Retrying API' : persona}
             </span>
           </div>
