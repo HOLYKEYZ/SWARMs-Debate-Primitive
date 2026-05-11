@@ -4,20 +4,3 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn server.api:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: NVIDIA_API_KEY
-        sync: false
-      - key: NVIDIA_MODEL
-        value: moonshotai/kimi-k2.6
-      - key: NVIDIA_BASE_URL
-        value: https://integrate.api.nvidia.com/v1
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_MODEL
-        value: gemini-2.5-flash
-      - key: LLM_PROVIDER
-        value: nvidia
-      - key: SOLANA_RPC_URL
-        value: https://api.devnet.solana.com
-      - key: WALLET_JSON_BASE64
-        sync: false
