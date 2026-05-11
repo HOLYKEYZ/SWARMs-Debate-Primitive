@@ -21,6 +21,8 @@ interface AgentCardProps {
   onSelect?: () => void;
   finalAnswer?: string;
   quorumReached?: boolean;
+  stakeDelta?: number;
+  settled?: boolean;
 }
 
 const personaColors: Record<string, string> = {
@@ -74,13 +76,20 @@ export default function AgentCard({
   selected,
   onSelect,
   finalAnswer,
-  quorumReached
+  quorumReached,
+  stakeDelta,
+  settled: settledProp,
 }: AgentCardProps) {
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
   const hasContent = (status === 'responded' && answer) && !retryMessage;
   const stance = getStance(answer);
   const matchedConsensus = Boolean(answer && finalAnswer && answer.trim().toLowerCase() === finalAnswer.trim().toLowerCase());
-  const settled = Boolean(finalAnswer && quorumReached !== undefined && hasContent);
+  const settled = Boolean(settledProp ?? (finalAnswer && quorumReached !== undefined && hasContent));
+  const stakeLabel = settled
+    ? (typeof stakeDelta === 'number'
+        ? `${stakeDelta >= 0 ? '+' : ''}${stakeDelta.toFixed(4)} SOL`
+        : matchedConsensus ? '+reward pending' : 'slashed')
+    : '0.050 SOL';
   
   const stanceConfig = {
     support: { icon: ThumbsUp, color: 'text-green-400 bg-green-400/10 border-green-400/30', label: 'Supporting' },
@@ -172,7 +181,7 @@ export default function AgentCard({
                   <Coins className="h-3 w-3" /> stake
                 </div>
                 <div className={cn("mt-1 text-sm font-black", settled ? (matchedConsensus ? "text-emerald-300" : "text-rose-300") : "text-white")}>
-                  {settled ? (matchedConsensus ? "+reward" : "-slash") : "0.050 SOL"}
+                  {stakeLabel}
                 </div>
               </div>
             </div>

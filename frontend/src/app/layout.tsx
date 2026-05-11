@@ -41,7 +41,7 @@ export default function RootLayout({
                  </div>
               </div>
             </nav>
-            <div className="flex-1 overflow-auto pt-12">
+            <div className="flex-1 overflow-auto pt-24">
               {children}
             </div>
           </SolanaProvider>

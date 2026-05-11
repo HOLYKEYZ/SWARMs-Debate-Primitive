@@ -4,8 +4,8 @@ import config
 from core.multi_provider_client import create_mixed_provider_client, MultiProviderClient
 
 # max retries for api calls
-MAX_RETRIES = 5
-BASE_RETRY_DELAY = 15
+MAX_RETRIES = 12
+BASE_RETRY_DELAY = 8
 
 
 class Agent:
@@ -125,7 +125,7 @@ class Agent:
 
             except Exception as e:
                 error_str = str(e).lower()
-                is_retryable = "429" in error_str or "rate limit" in error_str or "quota" in error_str or "timeout" in error_str or "timed out" in error_str
+                is_retryable = True
 
                 if is_retryable:
                     if attempt < len(self.llm.providers):

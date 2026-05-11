@@ -10,7 +10,7 @@ import SessionHistory from './SessionHistory';
 import ConsensusReport from './ConsensusReport';
 import DebateGraph from './DebateGraph';
 import AgentResponseTheater from './AgentResponseTheater';
-import { Send, Loader2, Play, Gauge, Users, Radio, Coins, ShieldAlert, Vote } from 'lucide-react';
+import { Send, Loader2, Play, Gauge, Users, Radio, Coins, ShieldAlert, Vote, History, X } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 
 interface EventData {
@@ -117,6 +117,7 @@ export default function DebateArena() {
 
   const [history, setHistory] = useState<SessionRecord[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState<boolean>(false);
 
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -497,19 +498,39 @@ export default function DebateArena() {
   }[mode];
   const transcriptHash = messages.find((m) => m.event === 'transcript_hashed')?.data.hash;
 
+  // map persona -> latest settlement so each agent card shows its real stake delta
+  const settlementByPersona = settlements.reduce<Record<string, AgentSettlement>>((acc, s) => {
+    acc[s.persona] = s;
+    return acc;
+  }, {});
+
   return (
-    <div className="w-full max-w-7xl mx-auto flex flex-col lg:flex-row gap-10 pb-20 items-start px-6 overflow-x-hidden">
-      
-      {/* Left Sidebar: History */}
-      <div className="hidden xl:block sticky top-32 w-80 flex-shrink-0">
-        <SessionHistory
-          sessions={history}
-          onSelect={(id) => {
-             loadSession(id);
-          }}
-          activeId={activeSessionId || undefined}
-        />
+    <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-6 pb-20 items-start px-4 sm:px-6 overflow-x-hidden">
+
+      {/* History toggle drawer (collapsed by default to reclaim side space) */}
+      <div className="w-full flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowHistory((v) => !v)}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition"
+        >
+          {showHistory ? <X className="h-3.5 w-3.5" /> : <History className="h-3.5 w-3.5" />}
+          {showHistory ? 'Hide history' : `Session history (${history.length})`}
+        </button>
       </div>
+
+      {showHistory && (
+        <div className="w-full glass-panel rounded-2xl border border-white/10 p-4 animate-in fade-in slide-in-from-top-2">
+          <SessionHistory
+            sessions={history}
+            onSelect={(id) => {
+              loadSession(id);
+              setShowHistory(false);
+            }}
+            activeId={activeSessionId || undefined}
+          />
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col gap-10 w-full min-w-0 overflow-x-hidden">
         {/* Header & Pipeline */}
@@ -755,7 +776,7 @@ export default function DebateArena() {
           <DebateGraph agents={agents} round={currentRound} />
 
           {agentMemory && (
-            <div className="rounded-3xl border border-purple-400/20 bg-purple-400/10 p-5">
+            <div className="rounded-3xl border border-purple-400/20.6 bg-minmax(r,1fr)e-400/10 p-5">
               <div className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-200/80">agent memory injected</div>
               <pre className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/70">{agentMemory}</pre>
             </div>
@@ -774,26 +795,31 @@ export default function DebateArena() {
               modeLabel={modeConfig.label}
             />
 
-            <div className="grid grid-cols-1 gap-4 content-start">
-              {renderedAgents.map((agent) => (
-                <div key={agent.name} className="min-w-0 h-full">
-                  <AgentCard 
-                    name={agent.name}
-                    persona={showPersonas ? agent.persona : ''}
-                    status={agent.status}
-                    answer={agent.answer}
-                    reasoning={agent.reasoning}
-                    confidence={agent.confidence}
-                    isActive={agent.status === 'thinking'}
-                    positionChanged={agent.positionChanged}
-                    retryMessage={agent.retryMessage}
-                    selected={selectedAgent?.name === agent.name}
-                    onSelect={() => setSelectedAgentName(agent.name)}
-                    finalAnswer={quorumResult?.final_answer}
-                    quorumReached={quorumResult?.quorum_reached}
-                  />
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4 content-start">
+              {renderedAgents.map((agent) => {
+                const settlement = settlementByPersona[agent.persona];
+                return (
+                  <div key={agent.name} className="min-w-0 h-full">
+                    <AgentCard
+                      name={agent.name}
+                      persona={showPersonas ? agent.persona : ''}
+                      status={agent.status}
+                      answer={agent.answer}
+                      reasoning={agent.reasoning}
+                      confidence={agent.confidence}
+                      isActive={agent.status === 'thinking'}
+                      positionChanged={agent.positionChanged}
+                      retryMessage={agent.retryMessage}
+                      selected={selectedAgent?.name === agent.name}
+                      onSelect={() => setSelectedAgentName(agent.name)}
+                      finalAnswer={quorumResult?.final_answer}
+                      quorumReached={quorumResult?.quorum_reached}
+                      stakeDelta={settlement?.stake_delta_sol}
+                      settled={Boolean(settlement)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
