@@ -264,6 +264,29 @@ export default function DebateArena() {
     }
   };
 
+  const handleNewDeliberation = () => {
+    autoLoadHistoryRef.current = false;
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+    setQuestion("");
+    setSelectorResult(null);
+    setQuorumResult(null);
+    setChainReceipt(null);
+    setChainError(null);
+    setSynthesisReport(null);
+    setAgentMemory(null);
+    setSettlements([]);
+    setMessages([]);
+    setAgents({});
+    setSelectedAgentName(null);
+    setExpandedAgents(new Set());
+    setCurrentRound(null);
+    setActiveSessionId(null);
+    setStatus("idle");
+    setStatusMessage("ready for a new swarm run");
+  };
+
   const handleEvent = useCallback((eventType: string, data: Record<string, unknown>) => {
     const agentName = typeof data.agent === "string" ? data.agent : null;
 
@@ -545,7 +568,17 @@ export default function DebateArena() {
     <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-6 pb-20 items-start px-4 sm:px-6 overflow-x-hidden">
 
       {/* History toggle drawer (collapsed by default to reclaim side space) */}
-      <div className="w-full flex justify-end">
+      <div className="w-full flex flex-wrap justify-end gap-2">
+        {(activeSessionId || !isIdle) && (
+          <button
+            type="button"
+            onClick={handleNewDeliberation}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-200 hover:bg-blue-500/20 transition"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            New deliberation
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowHistory((v) => !v)}
@@ -862,7 +895,7 @@ export default function DebateArena() {
       )}
 
         {/* Quorum / Receipt Section */}
-        {(quorumResult || shouldShowSynthesisReport || chainReceipt) && (
+        {(quorumResult || shouldShowSynthesisReport || chainReceipt || chainError) && (
           <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8">
              {quorumResult && <QuorumMeter confidence={quorumResult.confidence_score} threshold={quorumThreshold} />}
 
@@ -889,6 +922,17 @@ export default function DebateArena() {
                   artifacts={chainReceipt.artifacts}
                   settlements={settlements}
                 />
+             )}
+
+             {chainError && !chainReceipt && (
+               <div className="glass-panel rounded-lg border border-amber-400/20 bg-amber-400/10 p-5">
+                 <div className="text-[10px] uppercase tracking-widest text-amber-200/80 font-black mb-2">
+                   crypto receipt pending
+                 </div>
+                 <p className="text-sm leading-6 text-white/70">
+                   Consensus completed, but the Solana Devnet write did not return a receipt for this run: {chainError}
+                 </p>
+               </div>
              )}
           </div>
         )}
