@@ -124,12 +124,16 @@ class Session:
         # vote sessions are normalized into a single round with index 0.
         normalized_rounds = None
         synthesis_report = None
+        artifacts = []
+        settlements = []
         if self.session_data:
             if self.session_data.get("rounds"):
                 normalized_rounds = self.session_data["rounds"]
             elif self.session_data.get("responses"):
                 normalized_rounds = [{"round": 0, "responses": self.session_data["responses"]}]
             synthesis_report = self.session_data.get("synthesis_report")
+            artifacts = self.session_data.get("artifacts", [])
+            settlements = self.session_data.get("settlements", [])
         return {
             "session_id": self.session_id,
             "question": self.question,
@@ -139,6 +143,8 @@ class Session:
             "transcript_hash": self.transcript_data["hash"] if self.transcript_data else None,
             "transcript_data": {"rounds": normalized_rounds} if normalized_rounds else None,
             "synthesis_report": synthesis_report,
+            "artifacts": artifacts,
+            "settlements": settlements,
             "chain_signature": self.chain_signature,
             "chain_verified": self.chain_verified,
             "created_at": self.created_at,
@@ -227,9 +233,12 @@ class SessionManager:
     def get_session(self, session_id: str) -> Session | None:
         return self.sessions.get(session_id)
 
-    def list_sessions(self, limit: int = 20) -> list[dict]:
+    def list_sessions(self, limit: int = 50) -> list[dict]:
         sorted_sessions = sorted(
-            self.sessions.values(),
+            [
+                session for session in self.sessions.values()
+                if session.status == "complete" and session.session_data and session._get_final_answer()
+            ],
             key=lambda s: s.created_at,
             reverse=True
         )
@@ -334,7 +343,7 @@ class SessionManager:
                 "session_id": transcript_data["session_id"],
             })
 
-            if quorum:
+            if True:
                 session.status = "chain"
                 session.emit("status", {"status": "chain", "message": "Writing to Solana Devnet..."})
 
@@ -369,6 +378,11 @@ class SessionManager:
                         "signature": artifact_signature,
                         "explorer_url": f"https://explorer.solana.com/tx/{artifact_signature}?cluster=devnet",
                     })
+                    session.session_data.setdefault("artifacts", []).append({
+                        "type": "decision_artifact",
+                        "signature": artifact_signature,
+                        "explorer_url": f"https://explorer.solana.com/tx/{artifact_signature}?cluster=devnet",
+                    })
 
                     mode = _classify_session_mode(session.question)
                     if mode == "dao":
@@ -378,9 +392,19 @@ class SessionManager:
                             "signature": dao_signature,
                             "explorer_url": f"https://explorer.solana.com/tx/{dao_signature}?cluster=devnet",
                         })
+                        session.session_data.setdefault("artifacts", []).append({
+                            "type": "dao_prevote",
+                            "signature": dao_signature,
+                            "explorer_url": f"https://explorer.solana.com/tx/{dao_signature}?cluster=devnet",
+                        })
                     elif mode == "bounty":
                         bounty_signature = await asyncio.to_thread(client.log_bounty_resolution, session.session_id, transcript_data["hash"], 0.05, True)
                         session.emit("artifact_receipt", {
+                            "type": "bounty_resolution",
+                            "signature": bounty_signature,
+                            "explorer_url": f"https://explorer.solana.com/tx/{bounty_signature}?cluster=devnet",
+                        })
+                        session.session_data.setdefault("artifacts", []).append({
                             "type": "bounty_resolution",
                             "signature": bounty_signature,
                             "explorer_url": f"https://explorer.solana.com/tx/{bounty_signature}?cluster=devnet",
@@ -399,6 +423,16 @@ class SessionManager:
                                 matched = ans.strip().lower() == final_answer.strip().lower()
                                 stake_signature = await asyncio.to_thread(client.log_staking_settlement, session.session_id, agent_id, 0.05, delta / 100, matched)
                                 session.emit("agent_settlement", {
+                                    "agent_id": agent_id,
+                                    "persona": resp.get("persona", ""),
+                                    "reputation_delta": delta,
+                                    "stake_delta_sol": round(delta / 100, 4),
+                                    "matched_consensus": matched,
+                                    "reputation_signature": rep_signature,
+                                    "stake_signature": stake_signature,
+                                    "explorer_url": f"https://explorer.solana.com/tx/{stake_signature}?cluster=devnet",
+                                })
+                                session.session_data.setdefault("settlements", []).append({
                                     "agent_id": agent_id,
                                     "persona": resp.get("persona", ""),
                                     "reputation_delta": delta,
