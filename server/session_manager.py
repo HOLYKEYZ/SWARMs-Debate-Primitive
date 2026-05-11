@@ -429,7 +429,6 @@ class SessionManager:
 
     async def _run_debate(self, question: str, session: Session, agents: list[Agent], memory_context: str = "") -> dict:
         """run debate with event emissions for each agent action."""
-        num_rounds = session.rounds
         all_rounds = []
 
         session.emit("debate_start", {
@@ -439,12 +438,21 @@ class SessionManager:
         })
         position_changes = []
 
-        # round 0: initial opinions
-        session.emit("round_start", {"round": 0, "type": "initial"})
+        # round 0: sequential deliberation
+        session.emit("round_start", {"round": 0, "type": "deliberation"})
         round_responses = []
         for agent in agents:
-            session.emit("agent_thinking", {"agent": agent.name, "persona": agent.persona_type, "round": 0})
-            result = await agent.generate_response(question, memory_context)
+            peer_opinions = [
+                resp for resp in round_responses
+                if _is_valid_agent_response(resp.get("response", {}))
+            ]
+            session.emit("agent_thinking", {
+                "agent": agent.name,
+                "persona": agent.persona_type,
+                "round": 0,
+                "peers": len(peer_opinions)
+            })
+            result = await agent.generate_response(question, memory_context, peer_opinions)
             round_responses.append({
                 "name": agent.name,
                 "persona": agent.persona_type,
@@ -458,74 +466,10 @@ class SessionManager:
                 "confidence": result.get("confidence", 0),
                 "reasoning": result.get("reasoning", ""),
             })
-            # sequential throttle to prevent project-level 429s
-            await asyncio.sleep(2) 
+            await asyncio.sleep(1) 
         
         all_rounds.append({"round": 0, "responses": round_responses})
         session.emit("round_complete", {"round": 0})
-
-        # rounds 1-N: debate with peer opinions
-        for r in range(1, session.rounds + 1):
-            session.emit("round_start", {"round": r, "type": "debate"})
-            previous_responses = all_rounds[-1]["responses"]
-            new_round_responses = []
-
-            for agent in agents:
-                peer_opinions = [
-                    resp for resp in previous_responses
-                    if resp["name"] != agent.name and _is_valid_agent_response(resp.get("response", {}))
-                ]
-                session.emit("agent_thinking", {
-                    "agent": agent.name, "persona": agent.persona_type,
-                    "round": r, "peers": len(peer_opinions)
-                })
-
-                result = await agent.generate_response(question, memory_context, peer_opinions)
-                previous_self_response = None
-                for prev_resp in previous_responses:
-                    if prev_resp["name"] == agent.name:
-                        previous_self_response = prev_resp
-                        break
-
-                preserved_previous = False
-                if not _is_valid_agent_response(result) and previous_self_response and _is_valid_agent_response(previous_self_response.get("response", {})):
-                    result = previous_self_response["response"]
-                    preserved_previous = True
-
-                new_round_responses.append({
-                    "name": agent.name,
-                    "persona": agent.persona_type,
-                    "response": result
-                })
-
-                # track position changes
-                prev_answer = previous_self_response["response"].get("answer", "").strip().lower() if previous_self_response else None
-                new_answer = result.get("answer", "").strip().lower()
-                changed = bool(prev_answer and new_answer and prev_answer != new_answer and not preserved_previous)
-
-                if changed:
-                    position_changes.append({
-                        "agent": agent.name,
-                        "round": r,
-                        "old_answer": prev_answer,
-                        "new_answer": new_answer
-                    })
-
-                session.emit("agent_response", {
-                    "agent": agent.name,
-                    "persona": agent.persona_type,
-                    "round": r,
-                    "answer": result.get("answer", "N/A"),
-                    "confidence": result.get("confidence", 0),
-                    "reasoning": result.get("reasoning", ""),
-                    "position_changed": changed,
-                    "old_answer": prev_answer if changed else None,
-                    "preserved_previous": preserved_previous,
-                })
-                await asyncio.sleep(2)
-
-            all_rounds.append({"round": r, "responses": new_round_responses})
-            session.emit("round_complete", {"round": r})
 
         final_responses = all_rounds[-1]["responses"]
         tally_result = _finalize_tally(
