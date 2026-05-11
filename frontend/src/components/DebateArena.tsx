@@ -134,16 +134,6 @@ export default function DebateArena() {
 
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      const res = await fetch(apiUrl("/api/sessions"));
-      const data = await res.json();
-      setHistory(data);
-    } catch (err) {
-      console.error("Failed to fetch history", err);
-    }
-  }, []);
-
   const loadSession = useCallback(async (sessionId: string) => {
     try {
       const res = await fetch(apiUrl(`/api/session/${sessionId}`));
@@ -207,6 +197,20 @@ export default function DebateArena() {
     }
   }, []);
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch(apiUrl("/api/sessions"));
+      const data = await res.json();
+      const successfulHistory: SessionRecord[] = Array.isArray(data) ? data : [];
+      setHistory(successfulHistory);
+      if (!activeSessionId && status === "idle" && successfulHistory.length > 0) {
+        await loadSession(successfulHistory[0].session_id);
+      }
+    } catch (err) {
+      console.error("Failed to fetch history", err);
+    }
+  }, [activeSessionId, loadSession, status]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory();
@@ -216,12 +220,6 @@ export default function DebateArena() {
       }
     };
   }, [fetchHistory]);
-
-  useEffect(() => {
-    if (!activeSessionId && status === "idle" && history.length > 0) {
-      loadSession(history[0].session_id);
-    }
-  }, [activeSessionId, history, loadSession, status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

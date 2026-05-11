@@ -75,7 +75,7 @@ export default function SessionHistory({ sessions, onSelect, activeId }: Session
                     {mechanism}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <span className="text-[10px] font-bold text-white/20 flex-shrink-0 whitespace-nowrap">
                      {new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                   </span>
