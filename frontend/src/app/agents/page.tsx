@@ -28,7 +28,7 @@ export default function AgentsPage() {
     fetch(apiUrl("/api/agents"))
       .then(res => res.json())
       .then(data => {
-        setAgents(data);
+        setAgents(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(err => {
@@ -62,6 +62,7 @@ export default function AgentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 z-10 relative">
             {agents.map((agent, index) => {
               const theme = personaColors[agent.persona] || { text: 'text-white', border: 'border-white/30', bg: 'bg-white/5', ring: 'group-hover:ring-white/50', grad: 'from-white/10 to-transparent' };
+              const reputationScore = Number.isFinite(agent.reputation_score) ? agent.reputation_score : 0;
               
               return (
                 <div key={agent.agent_id} className={`group glass-panel relative overflow-hidden rounded-3xl transition-glass hover:-translate-y-1 hover:shadow-2xl ${theme.shadow} ring-1 ring-transparent ${theme.ring} border ${theme.border}`}>
@@ -99,7 +100,7 @@ export default function AgentsPage() {
                       <div className={`flex-1 bg-gradient-to-br ${theme.bg} rounded-2xl p-4 border ${theme.border}`}>
                         <div className={`text-[10px] uppercase tracking-widest ${theme.text} opacity-70 font-bold mb-2`}>Reputation</div>
                         <div className={`text-3xl font-black ${theme.text} tracking-tighter`}>
-                          {agent.reputation_score > 0 ? '+' : ''}{agent.reputation_score}
+                          {reputationScore > 0 ? '+' : ''}{reputationScore}
                         </div>
                       </div>
                     </div>

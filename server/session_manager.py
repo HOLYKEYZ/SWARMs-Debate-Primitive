@@ -479,68 +479,6 @@ class SessionManager:
             "final_answer"
         )
 
-        if not tally_result["quorum_reached"] and tally_result["valid_response_count"] > 0:
-            session.emit("round_start", {"round": 1, "type": "change_review"})
-            previous_responses = all_rounds[-1]["responses"]
-            review_responses = []
-            for agent in agents:
-                previous_self_response = next((resp for resp in previous_responses if resp["name"] == agent.name), None)
-                peer_opinions = [
-                    resp for resp in previous_responses
-                    if resp["name"] != agent.name and _is_valid_agent_response(resp.get("response", {}))
-                ]
-                if not previous_self_response or not _is_valid_agent_response(previous_self_response.get("response", {})):
-                    review_responses.append(previous_self_response)
-                    continue
-
-                session.emit("agent_thinking", {
-                    "agent": agent.name,
-                    "persona": agent.persona_type,
-                    "round": 1,
-                    "peers": len(peer_opinions)
-                })
-                result = await agent.generate_response(question, memory_context, peer_opinions)
-                if not _is_valid_agent_response(result):
-                    result = previous_self_response["response"]
-
-                prev_answer = previous_self_response["response"].get("answer", "").strip().lower()
-                new_answer = result.get("answer", "").strip().lower()
-                changed = bool(prev_answer and new_answer and prev_answer != new_answer)
-                if changed:
-                    position_changes.append({
-                        "agent": agent.name,
-                        "round": 1,
-                        "old_answer": prev_answer,
-                        "new_answer": new_answer
-                    })
-
-                review_responses.append({
-                    "name": agent.name,
-                    "persona": agent.persona_type,
-                    "response": result
-                })
-                session.emit("agent_response", {
-                    "agent": agent.name,
-                    "persona": agent.persona_type,
-                    "round": 1,
-                    "answer": result.get("answer", "N/A"),
-                    "confidence": result.get("confidence", 0),
-                    "reasoning": result.get("reasoning", ""),
-                    "position_changed": changed,
-                    "old_answer": prev_answer if changed else None,
-                })
-                await asyncio.sleep(1)
-
-            all_rounds.append({"round": 1, "responses": review_responses})
-            session.emit("round_complete", {"round": 1})
-            final_responses = review_responses
-            tally_result = _finalize_tally(
-                final_responses,
-                len(agents),
-                session.quorum_threshold,
-                "final_answer"
-            )
-
         return {
             "mechanism": "debate",
             "question": question,
