@@ -92,14 +92,14 @@ export default function AgentCard({
   
   return (
     <div className={cn(
-      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col",
-      isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02]` : "opacity-90 scale-100",
+      "glass-panel rounded-2xl p-6 transition-all duration-500 relative overflow-hidden flex flex-col isolate",
+      isActive ? `ring-2 ring-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02] z-10` : "opacity-90 scale-100 z-0",
       colorClass.split(' ')[2]
     )}>
       
       {/* Position Change Indicator */}
       {positionChanged && (
-        <div className="absolute top-0 right-0 bg-yellow-500/20 text-yellow-300 text-[10px] uppercase font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1 animate-pulse">
+        <div className="absolute top-0 right-0 bg-yellow-500/20 text-yellow-300 text-[10px] uppercase font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1 animate-pulse z-20">
           <RefreshCw className="w-3 h-3" /> Position Changed
         </div>
       )}
@@ -107,7 +107,7 @@ export default function AgentCard({
       {/* Stance Indicator */}
       {hasContent && (
         <div className={cn(
-          "absolute top-4 right-4 px-3 py-1.5 rounded-lg border flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider",
+          "absolute top-4 right-4 px-3 py-1.5 rounded-lg border flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider z-20",
           stanceConfig[stance].color
         )}>
           <StanceIcon className="w-3.5 h-3.5" />
