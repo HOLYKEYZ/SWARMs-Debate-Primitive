@@ -178,7 +178,7 @@ async def get_session(session_id: str):
 
 
 @app.get("/api/sessions")
-async def list_sessions(limit: int = 20):
+async def list_sessions(limit: int = 50):
     """list recent sessions."""
     return manager.list_sessions(limit)
 
@@ -193,12 +193,11 @@ async def list_agents():
 
         agents_data = []
         for persona, agent_id in data.get("agents", {}).items():
-            # Compute reputation from all completed sessions
             total_rep = 0.0 # start at 0
             sessions_count = 0
 
             for session in manager.sessions.values():
-                if session.session_data and session.status == "complete":
+                if session.session_data and session.status == "complete" and session.session_data.get("final_answer"):
                     final_answer = session.session_data.get("final_answer", "")
                     quorum_reached = session.session_data.get("quorum_reached", False)
                     rounds = session.session_data.get("rounds", [])
@@ -216,7 +215,7 @@ async def list_agents():
             agents_data.append({
                 "persona": persona,
                 "agent_id": agent_id,
-                "reputation_score": round(total_rep, 2),
+                "reputation_score": round(total_rep / sessions_count, 2) if sessions_count else 0.0,
                 "sessions_participated": sessions_count
             })
 
