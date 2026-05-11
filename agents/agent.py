@@ -109,7 +109,8 @@ class Agent:
         """
         user_content = self._build_prompt(question, context, peer_opinions)
 
-        for attempt in range(MAX_RETRIES):
+        total_attempts = max(MAX_RETRIES, len(self.llm.providers))
+        for attempt in range(total_attempts):
             try:
                 response = await asyncio.wait_for(
                     self.llm.generate(
@@ -134,9 +135,9 @@ class Agent:
                     continue
                 
                 # after exhausting all providers, wait and retry with exponential backoff
-                if attempt < MAX_RETRIES - 1:
+                if attempt < total_attempts - 1:
                     delay = min(BASE_RETRY_DELAY * (2 ** (attempt - len(self.llm.providers) + 1)), 30)
-                    print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{MAX_RETRIES})...")
+                    print(f"    [retry] {self.name} pool exhausted, waiting {delay}s (attempt {attempt + 1}/{total_attempts})...")
                     
                     if self.on_retry:
                         self.on_retry(self.name, attempt + 1, delay)
