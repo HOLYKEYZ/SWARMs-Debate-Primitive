@@ -265,15 +265,17 @@ def create_mixed_provider_client() -> MultiProviderClient:
             "model": gemini_model2,
         })
     
-    # Fallback: Groq (if configured)
+    # Fallback: Groq for all 4 agents (if configured)
     groq_key = os.getenv("GROQ_API_KEY")
     groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     if groq_key:
-        providers.append({
-            "provider": "groq",
-            "api_key": groq_key,
-            "model": groq_model,
-        })
+        # Add Groq 4 times (one fallback per agent)
+        for _ in range(4):
+            providers.append({
+                "provider": "groq",
+                "api_key": groq_key,
+                "model": groq_model,
+            })
     
     if not providers:
         raise ValueError("No API keys configured for any provider")
