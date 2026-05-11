@@ -127,9 +127,9 @@ export default function AgentCard({
       )}
 
       <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center border",
+            "w-10 h-10 shrink-0 rounded-full flex items-center justify-center border",
             colorClass.split(' ').slice(0, 2).join(' ')
           )}>
             {status === 'thinking' ? (
@@ -138,8 +138,8 @@ export default function AgentCard({
                <User className="w-5 h-5" />
             )}
           </div>
-          <div className="flex flex-col gap-1">
-            <h3 className="text-sm font-black text-white/90 tracking-tight">{name}</h3>
+          <div className="flex min-w-0 flex-col gap-1">
+            <h3 className="break-words text-sm font-black leading-tight tracking-tight text-white/90">{name}</h3>
             <span className={cn("text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
               {retryMessage ? 'Retrying API' : persona}
             </span>

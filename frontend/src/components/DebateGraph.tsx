@@ -143,7 +143,7 @@ export default function DebateGraph({ agents, round }: DebateGraphProps) {
     ctx.fillText('SWARM', centerX, centerY - 10);
 
     ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = round === null ? 'rgba(34, 197, 94, 0.9)' : 'rgba(255, 255, 255, 0.75)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
     ctx.fillText(round !== null ? `ROUND ${round}` : 'IDLE', centerX, centerY + 10);
 
   }, [nodes, round]);
