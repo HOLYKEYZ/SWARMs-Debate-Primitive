@@ -56,7 +56,10 @@ class Agent:
                 user_content += f"--- {op['name']} ({op['persona']}) ---\n"
                 user_content += f"Answer: {op['response']['answer']}\n"
                 user_content += f"Reasoning: {op['response']['reasoning']}\n\n"
-            user_content += "Critically evaluate these perspectives. If you agree with a peer, explain why. If you disagree, provide a logical counter-argument.\n\n"
+            user_content += (
+                "Do not assume these perspectives are correct. First identify the strongest flaw, missing context, or hidden assumption in the prior answers. "
+                "Then answer the original question independently. Agree with peers only if the original question and practical objective still support their answer after that critique.\n\n"
+            )
 
         user_content += (
             "Please provide your response strictly in the following JSON format "

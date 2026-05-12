@@ -409,7 +409,6 @@ export default function DebateArena() {
   }, []);
 
   const connectSSE = useCallback((id: string) => {
-    setStatus("running");
     setActiveSessionId(id);
     const streamUrl = apiUrl(`/api/session/${id}/stream`);
     console.log("Connecting to SSE:", streamUrl);
@@ -439,6 +438,7 @@ export default function DebateArena() {
         if (normalizedPayload.event === "session_complete" || normalizedPayload.event === "error") {
           es.close();
           setStatus(normalizedPayload.event === "error" ? "failed" : "complete");
+          setStatusMessage(normalizedPayload.event === "error" ? "Session failed" : "Session complete");
           fetchHistory();
         }
       } catch (e) {
@@ -483,7 +483,7 @@ export default function DebateArena() {
         setStatus((currentStatus) => {
           if (currentStatus === "running") {
             console.log("SSE closed while running, will attempt reconnect on visibility");
-            return "running"; // Keep status as running
+            return "running";
           }
           return currentStatus === "running" ? "complete" : currentStatus;
         });
