@@ -105,7 +105,7 @@ export default function AgentCard({
   
   return (
     <button type="button" onClick={onSelect} className={cn(
-      "glass-panel rounded-2xl p-5 text-left transition-all duration-500 relative overflow-hidden flex flex-col isolate border min-h-[220px]",
+      "glass-panel rounded-2xl p-5 text-left transition-all duration-500 relative overflow-hidden flex flex-col isolate border min-h-[220px] w-full max-w-full min-w-0",
       selected ? "ring-2 ring-blue-400/60 border-blue-400/40 shadow-[0_0_35px_rgba(59,130,246,0.2)]" : "border-white/5 hover:border-white/15",
       isActive ? "scale-[1.02] z-10" : "opacity-95 scale-100 z-0",
       colorClass.split(' ')[2]
@@ -117,7 +117,7 @@ export default function AgentCard({
         </div>
       )}
       
-      <div className="flex items-start justify-between gap-3 mb-5">
+      <div className="flex min-w-0 items-start justify-between gap-3 mb-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className={cn(
             "w-10 h-10 shrink-0 rounded-full flex items-center justify-center border",
@@ -130,8 +130,8 @@ export default function AgentCard({
             )}
           </div>
           <div className="flex min-w-0 flex-col gap-1">
-            <h3 className="break-words text-sm font-black leading-tight tracking-tight text-white/90">{name}</h3>
-            <span className={cn("break-words text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
+            <h3 className="min-w-0 break-words text-sm font-black leading-tight tracking-tight text-white/90">{name}</h3>
+            <span className={cn("min-w-0 break-words text-[10px] font-black uppercase tracking-widest", retryMessage ? 'text-amber-400 animate-pulse' : colorClass.split(' ')[0])}>
               {retryMessage ? 'Retrying API' : persona}
             </span>
           </div>
