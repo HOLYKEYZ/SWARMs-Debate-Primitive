@@ -41,7 +41,7 @@ cd frontend && npm install && cd ..
 Create `.env` in repo root:
 
 ```env
-# at least one provider is required; more keys = more failover headroom
+# at least one provider is required; more keys = more failover headroom cuz this project requires lots of deliberations from the agents and it can be rate limited if not used this way
 NVIDIA_API_KEY=nvapi-...
 NVIDIA_API_KEY2=nvapi-...
 NVIDIA_MODEL=moonshotai/kimi-k2.6
