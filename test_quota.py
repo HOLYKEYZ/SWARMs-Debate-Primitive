@@ -12,10 +12,10 @@ for i in range(1, 5):
         continue
 
     print(f"Testing {key_name}: {key[:10]}...")
-    client = genai.Client(api_key=key)
+    client = genai.Client(api_key=key, http_options={'timeout': 30})
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents='hello'
         )
         print("Success:", response.text.replace("\n", " "))
