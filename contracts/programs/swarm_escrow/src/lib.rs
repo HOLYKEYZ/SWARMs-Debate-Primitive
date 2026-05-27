@@ -52,15 +52,8 @@ pub mod swarm_escrow {
         // In a real product, it might go to a different recipient
         if quorum_reached {
             let amount = escrow.amount;
-            
-            // subtract rent from the amount to transfer to avoid leaving account under-funded
-            let rent = Rent::get()?.minimum_balance(escrow.to_account_info().data_len());
-            let transfer_amount = amount.checked_sub(rent).unwrap_or(0);
-
-            if transfer_amount > 0 {
-                **escrow.to_account_info().try_borrow_mut_lamports()? -= transfer_amount;
-                **ctx.accounts.requester.try_borrow_mut_lamports()? += transfer_amount;
-            }
+            **escrow.to_account_info().try_borrow_mut_lamports()? -= amount;
+            **ctx.accounts.requester.try_borrow_mut_lamports()? += amount;
         }
 
         Ok(())
@@ -108,7 +101,8 @@ pub struct ResolveEscrow<'info> {
     #[account(
         mut,
         has_one = requester,
-        has_one = oracle @ ErrorCode::UnauthorizedOracle
+        has_one = oracle @ ErrorCode::UnauthorizedOracle,
+        close = requester
     )]
     pub escrow_state: Account<'info, EscrowState>,
     
