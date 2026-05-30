@@ -80,7 +80,13 @@ class Agent:
 
         if start_idx != -1 and end_idx != -1:
             json_str = response_text[start_idx:end_idx + 1]
-            return json.loads(json_str)
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError:
+                pass
+            else:
+                if isinstance(data, dict) and all(k in data for k in ("answer", "confidence", "reasoning")):
+                    return data
 
         return {
             "answer": "Error parsing output",
