@@ -14,9 +14,6 @@ class LLMResponse:
 
 class LLMClient:
     def __init__(self, api_keys: list[str] | None = None, models: list[str] | None = None):
-        if config.LLM_PROVIDER != "nvidia":
-            raise ValueError(f"Unsupported LLM provider: {config.LLM_PROVIDER}")
-
         self.api_keys = [key for key in (api_keys or config.API_KEYS) if key]
         self.models = models or config.API_MODELS
         if not self.api_keys:
