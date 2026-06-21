@@ -53,7 +53,11 @@ class LLMClient:
         }
 
         data = await asyncio.to_thread(self._post_json, headers, payload)
-        content = data.get("choices", [{}])[0].get("message", {}).get("content")
+        choices = data.get("choices", [])
+        if choices:
+            content = choices[0].get("message", {}).get("content")
+        else:
+            content = None
         if not content:
             raise ValueError(f"empty llm response: {json.dumps(data)[:500]}")
         return LLMResponse(text=content)
