@@ -87,7 +87,7 @@ export default function AgentCard({
   const colorClass = personaColors[persona] || 'text-white border-white/30 bg-white/5';
   const hasContent = (status === 'responded' && answer) && !retryMessage;
   const stance = getStance(answer);
-  const matchedConsensus = Boolean(answer && finalAnswer && answer.trim().toLowerCase() === finalAnswer.trim().toLowerCase());
+  const matchedConsensus = Boolean(answer && finalAnswer && getStance(answer) !== 'neutral' && getStance(answer) === getStance(finalAnswer));
   const settled = Boolean(settledProp ?? (finalAnswer && quorumReached !== undefined && hasContent));
   const stakeLabel = settled
     ? (typeof stakeDelta === 'number'
