@@ -68,6 +68,20 @@ def run_vote(question: str, context: str = "", num_agents: int = None) -> dict:
 
     vote_tally = dict(Counter(answers))
 
+    # guard against empty tally (no responses collected)
+    if not vote_tally:
+        print("\nNo votes collected — returning failure.")
+        return {
+            "mechanism": "vote",
+            "question": question,
+            "responses": responses,
+            "vote_tally": {},
+            "winning_answer": "No responses collected",
+            "confidence_score": 0.0,
+            "agent_count": len(agents),
+            "quorum_reached": False,
+        }
+
     # determine winner
     winning_answer_lower = max(vote_tally, key=vote_tally.get)
     winning_count = vote_tally[winning_answer_lower]
